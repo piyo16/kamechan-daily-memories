@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fcfcfb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1a1a19" media="(prefers-color-scheme: dark)">
+  <title>かめちゃん日記</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>🐱 かめちゃん日記</h1>
+    <span id="sync-badge" class="sync-badge" hidden></span>
+  </header>
+
+  <main>
+    <!-- きろく -->
+    <section id="tab-record" class="tab">
+      <div class="tiles">
+        <div class="tile">
+          <span class="tile-label">今日のごはん</span>
+          <span class="tile-value"><b id="today-food">0</b> g</span>
+        </div>
+        <div class="tile">
+          <span class="tile-label">今日の水</span>
+          <span class="tile-value"><b id="today-water">0</b> ml</span>
+        </div>
+      </div>
+
+      <form id="record-form" class="card">
+        <div class="type-select" role="radiogroup" aria-label="記録の種類">
+          <button type="button" class="type-btn is-active" data-type="food">🍚 ごはん</button>
+          <button type="button" class="type-btn" data-type="water">💧 水</button>
+          <button type="button" class="type-btn" data-type="snack">🍬 おやつ</button>
+        </div>
+
+        <div id="bowl-rows"></div>
+        <datalist id="food-list"></datalist>
+
+        <button type="button" id="add-row" class="ghost-btn add-row-btn">＋ お皿を追加</button>
+        <p class="consumed-preview" id="consumed-preview" hidden></p>
+        <p class="hint">今日の記録はここに残ります。数字を直したら「保存する」を押してください。</p>
+
+        <label>メモ(任意)
+          <input type="text" id="note" placeholder="例: 食いつき良い">
+        </label>
+
+        <div class="field-row">
+          <label>日時(新しいお皿の分)
+            <input type="datetime-local" id="ts">
+          </label>
+          <label>記録した人
+            <input type="text" id="by" placeholder="例: しゅん">
+          </label>
+        </div>
+
+        <button type="submit" class="primary-btn">保存する</button>
+      </form>
+
+      <!-- 今日のかめ(写真・メモ・体重) -->
+      <form id="diary-form" class="card">
+        <h2 class="card-title">📷 今日のかめ</h2>
+        <div class="diary-row">
+          <label class="photo-pick" id="photo-pick-label">
+            <span id="photo-pick-hint">写真を<br>えらぶ</span>
+            <img id="photo-preview" alt="" hidden>
+            <input type="file" id="photo-input" accept="image/*" hidden>
+          </label>
+          <div class="diary-fields">
+            <label>今日のようす(任意)
+              <textarea id="diary-note" rows="2" placeholder="例: 日なたでずっと寝てた"></textarea>
+            </label>
+            <div class="field-row">
+              <label>体重 kg(任意)
+                <input type="number" id="diary-weight" inputmode="decimal" min="0" step="0.01" placeholder="4.2">
+              </label>
+              <label>体温 ℃(任意)
+                <input type="number" id="diary-temp" inputmode="decimal" min="0" step="0.1" placeholder="38.5">
+              </label>
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="primary-btn">残す</button>
+      </form>
+
+      <!-- トイレ記録 -->
+      <div class="card">
+        <h2 class="card-title">🚽 トイレ</h2>
+        <div class="toilet-row">
+          <button type="button" id="toilet-pee" class="toilet-btn">💦 おしっこ <b id="toilet-pee-count">0</b>回</button>
+          <button type="button" id="toilet-poop" class="toilet-btn">💩 うんち <b id="toilet-poop-count">0</b>回</button>
+        </div>
+        <p class="hint">ボタンを押すと今の時刻で1回記録されます。まちがえたら「りれき」から削除できます。</p>
+      </div>
+
+      <ul id="today-diary-list" class="record-list"></ul>
+    </section>
+
+    <!-- グラフ -->
+    <section id="tab-charts" class="tab" hidden>
+      <div class="month-nav">
+        <button type="button" id="month-prev" class="ghost-btn" aria-label="前の月">◀</button>
+        <input type="month" id="chart-month">
+        <button type="button" id="month-next" class="ghost-btn" aria-label="次の月">▶</button>
+      </div>
+      <div class="range-toggle" role="radiogroup" aria-label="表示単位">
+        <button type="button" class="range-btn is-active" data-mode="week">週ごと</button>
+        <button type="button" class="range-btn" data-mode="day">日ごと</button>
+      </div>
+
+      <div class="card chart-card">
+        <h2 class="chart-title"><span class="swatch swatch-food"></span>ごはん(g / 日)</h2>
+        <div id="chart-food" class="chart-box"></div>
+      </div>
+      <div class="card chart-card">
+        <h2 class="chart-title"><span class="swatch swatch-water"></span>水(ml / 日)</h2>
+        <div id="chart-water" class="chart-box"></div>
+      </div>
+      <div class="card chart-card" id="snack-card" hidden>
+        <h2 class="chart-title"><span class="swatch swatch-snack"></span>おやつ(g / 日)</h2>
+        <div id="chart-snack" class="chart-box"></div>
+      </div>
+      <div class="card chart-card" id="weight-card" hidden>
+        <h2 class="chart-title"><span class="swatch swatch-weight"></span>体重(kg)</h2>
+        <div id="chart-weight" class="chart-box"></div>
+      </div>
+      <div class="card chart-card" id="temp-card" hidden>
+        <h2 class="chart-title"><span class="swatch swatch-temp"></span>体温(℃)</h2>
+        <div id="chart-temp" class="chart-box"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">この月の週ごとの平均(1日あたり)</h2>
+        <table class="week-table">
+          <thead>
+            <tr><th>週</th><th>🍚 ごはん</th><th>💧 水</th><th>記録日数</th></tr>
+          </thead>
+          <tbody id="week-table-body"></tbody>
+        </table>
+        <p class="hint">つけ忘れの日は平均に含めていません。</p>
+      </div>
+      <p class="hint">水を飲む量が急に増えたり減ったりしたら、体調変化のサインかもしれません。</p>
+    </section>
+
+    <!-- りれき -->
+    <section id="tab-history" class="tab" hidden>
+      <div class="card history-filter">
+        <label>日付をえらんで見る
+          <input type="date" id="history-date">
+        </label>
+        <button type="button" id="history-clear" class="ghost-btn" hidden>すべて表示</button>
+      </div>
+      <div id="history-list-box"></div>
+    </section>
+
+    <!-- マイページ -->
+    <section id="tab-mypage" class="tab" hidden>
+      <div class="card profile-card">
+        <label class="avatar-pick" id="avatar-pick-label">
+          <img id="avatar-img" alt="" hidden>
+          <span id="avatar-hint">🐱</span>
+          <input type="file" id="avatar-input" accept="image/*" hidden>
+        </label>
+        <div class="profile-head">
+          <h2 id="profile-name-display">名前未登録</h2>
+          <p id="profile-sub" class="hint"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">🩺 けんこうチェック</h2>
+        <ul id="health-list" class="health-list"></ul>
+        <p class="hint">記録の変化から気づきを出す簡易チェックです。診断ではありません。</p>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">🤖 AIに相談する</h2>
+        <p class="hint">直近の記録とプロフィールをまとめた相談文を作ります。コピーして、ClaudeやChatGPTなどのAIチャットに貼り付けてください(無料で使えます)。</p>
+        <button type="button" id="consult-btn" class="primary-btn">相談文を作る</button>
+        <textarea id="consult-text" rows="8" hidden readonly></textarea>
+        <button type="button" id="consult-copy" class="ghost-btn" hidden>📋 コピーする</button>
+      </div>
+
+      <form id="profile-form" class="card">
+        <h2 class="card-title">プロフィールを編集</h2>
+        <label>名前
+          <input type="text" id="p-name" placeholder="かめちゃん">
+        </label>
+        <div class="field-row">
+          <label>性別
+            <select id="p-sex">
+              <option value="">未選択</option>
+              <option>オス</option>
+              <option>メス</option>
+            </select>
+          </label>
+          <label>生まれた年月
+            <input type="month" id="p-birth">
+          </label>
+        </div>
+        <label>猫種
+          <input type="text" id="p-breed" placeholder="例: 雑種(キジトラ)">
+        </label>
+        <label>病気・通院中のこと
+          <textarea id="p-diseases" rows="2" placeholder="例: なし / 腎臓の数値を経過観察中"></textarea>
+        </label>
+        <button type="submit" class="primary-btn">保存する</button>
+      </form>
+    </section>
+
+    <!-- 設定 -->
+    <section id="tab-settings" class="tab" hidden>
+      <div class="card">
+        <h2 class="card-title">この端末</h2>
+        <label>記録した人の名前(入力欄の初期値になります)
+          <input type="text" id="setting-by">
+        </label>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">フードの登録</h2>
+        <p class="hint">登録すると「ごはん」の名前欄で選べて、いつもの量が自動入力されます。</p>
+        <ul id="food-defs" class="food-defs"></ul>
+        <div class="field-row">
+          <label>フード名
+            <input type="text" id="food-name" placeholder="例: カリカリ">
+          </label>
+          <label>いつもの量 g
+            <input type="number" id="food-amount" inputmode="decimal" min="0" step="0.1" placeholder="例: 25">
+          </label>
+        </div>
+        <button type="button" id="food-add" class="ghost-btn">＋ 登録する</button>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">家族と共有(Googleスプレッドシート同期)</h2>
+        <p class="hint">docs/setup.md の手順でApps Scriptを設定すると、家族全員のスマホで同じ記録と写真が見られます。</p>
+        <label>Apps Script のURL
+          <input type="url" id="setting-gas-url" placeholder="https://script.google.com/macros/s/…/exec">
+        </label>
+        <label>合言葉(トークン)
+          <input type="text" id="setting-gas-token" placeholder="スクリプトに設定したものと同じ文字列">
+        </label>
+        <button type="button" id="sync-now" class="primary-btn">いますぐ同期</button>
+        <p id="sync-status" class="hint"></p>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">バックアップ</h2>
+        <p class="hint"><span id="record-count">0</span> 件の記録が保存されています。</p>
+        <div class="field-row">
+          <button type="button" id="export-btn" class="ghost-btn">書き出し(JSON)</button>
+          <button type="button" id="import-btn" class="ghost-btn">読み込み</button>
+        </div>
+        <input type="file" id="import-file" accept="application/json" hidden>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tab-bar">
+    <button class="tab-btn is-active" data-tab="record">✏️<span>きろく</span></button>
+    <button class="tab-btn" data-tab="charts">📈<span>グラフ</span></button>
+    <button class="tab-btn" data-tab="history">📖<span>りれき</span></button>
+    <button class="tab-btn" data-tab="mypage">🐱<span>マイページ</span></button>
+    <button class="tab-btn" data-tab="settings">⚙️<span>設定</span></button>
+  </nav>
+
+  <script src="js/core.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

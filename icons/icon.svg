@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#2a78d6"/>
+
+  <!-- 耳(たち耳・小さめ・先が丸い) -->
+  <path d="M138 250 Q118 130 152 118 Q196 116 228 168 Z" fill="#f4d4b0"/>
+  <path d="M374 250 Q394 130 360 118 Q316 116 284 168 Z" fill="#f4d4b0"/>
+  <path d="M156 222 Q146 152 166 144 Q194 146 212 178 Z" fill="#eeb0a2"/>
+  <path d="M356 222 Q366 152 346 144 Q318 146 300 178 Z" fill="#eeb0a2"/>
+  <!-- 耳のタビー模様 -->
+  <path d="M138 250 Q128 190 134 160 L168 214 Z" fill="#de9557"/>
+  <path d="M374 250 Q384 190 378 160 L344 214 Z" fill="#de9557"/>
+
+  <!-- 丸い顔(スコティッシュフォールドらしく) -->
+  <circle cx="256" cy="290" r="158" fill="#f4d4b0"/>
+
+  <!-- 口まわりは淡く(カメオの白っぽいアンダーコート) -->
+  <ellipse cx="256" cy="345" rx="88" ry="62" fill="#fbeedc"/>
+
+  <!-- 額のM字タビー模様 -->
+  <g stroke="#de9557" stroke-width="16" stroke-linecap="round" fill="none">
+    <path d="M256 152 L256 198"/>
+    <path d="M218 150 Q222 172 230 192"/>
+    <path d="M294 150 Q290 172 282 192"/>
+  </g>
+  <!-- ほほの縞 -->
+  <g stroke="#de9557" stroke-width="13" stroke-linecap="round" fill="none">
+    <path d="M112 272 Q134 276 154 282"/>
+    <path d="M116 310 Q138 310 156 310"/>
+    <path d="M400 272 Q378 276 358 282"/>
+    <path d="M396 310 Q374 310 356 310"/>
+  </g>
+
+  <!-- 大きくて丸い金色の目 -->
+  <circle cx="202" cy="282" r="27" fill="#e8a33d"/>
+  <circle cx="310" cy="282" r="27" fill="#e8a33d"/>
+  <circle cx="202" cy="284" r="13" fill="#2a2a28"/>
+  <circle cx="310" cy="284" r="13" fill="#2a2a28"/>
+  <circle cx="207" cy="278" r="4.5" fill="#ffffff"/>
+  <circle cx="315" cy="278" r="4.5" fill="#ffffff"/>
+
+  <!-- 鼻と口 -->
+  <path d="M243 330 L269 330 L256 346 Z" fill="#e58a8a"/>
+  <path d="M256 346 Q256 366 232 368 M256 346 Q256 366 280 368" stroke="#b98052" stroke-width="8" fill="none" stroke-linecap="round"/>
+
+  <!-- ひげ -->
+  <g stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.85">
+    <line x1="96" y1="336" x2="152" y2="342"/>
+    <line x1="100" y1="370" x2="154" y2="364"/>
+    <line x1="416" y1="336" x2="360" y2="342"/>
+    <line x1="412" y1="370" x2="358" y2="364"/>
+  </g>
+</svg>

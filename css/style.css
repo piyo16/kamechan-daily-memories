@@ -1,0 +1,518 @@
+/* かめちゃん日記 — モバイルファースト */
+
+:root {
+  --surface-1: #fcfcfb;
+  --page: #f9f9f7;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --baseline: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.10);
+  --series-food: #2a78d6;   /* categorical slot 1: blue */
+  --series-water: #1baf7a;  /* categorical slot 2: aqua */
+  --series-weight: #eda100; /* categorical slot 3: yellow */
+  --series-snack: #4a3aa7;  /* categorical slot 5: violet */
+  --series-temp: #e34948;   /* categorical slot 6: red */
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --accent: #2a78d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --series-food: #3987e5;
+    --series-water: #199e70;
+    --series-weight: #c98500;
+    --series-snack: #9085e9;
+    --series-temp: #e66767;
+    --accent: #3987e5;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--page);
+  color: var(--text-primary);
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 8px;
+}
+
+.app-header h1 { font-size: 1.15rem; margin: 0; }
+
+.sync-badge {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+main { padding: 0 14px; max-width: 480px; margin: 0 auto; }
+
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  margin: 10px 0;
+}
+
+.section-title {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin: 16px 2px 6px;
+}
+
+/* --- 今日の合計タイル --- */
+.tiles { display: flex; gap: 10px; }
+
+.tile {
+  flex: 1;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tile-label { font-size: 0.75rem; color: var(--text-secondary); }
+.tile-value { font-size: 0.95rem; color: var(--text-secondary); }
+.tile-value b { font-size: 1.7rem; color: var(--text-primary); font-weight: 700; }
+
+/* --- 入力フォーム --- */
+.type-select { display: flex; gap: 8px; margin-bottom: 12px; }
+
+.type-btn {
+  flex: 1;
+  padding: 10px 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.type-btn.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-weight: 700;
+}
+
+label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 8px 0;
+}
+
+input, textarea, select {
+  width: 100%;
+  min-width: 0;
+  margin-top: 4px;
+  padding: 10px;
+  font-size: 1rem;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--page);
+  color: var(--text-primary);
+}
+
+textarea { resize: vertical; }
+
+.card-title {
+  font-size: 0.95rem;
+  margin: 0 0 8px;
+}
+
+.field-row { display: flex; gap: 10px; }
+.field-row > * { flex: 1; min-width: 0; }
+
+.unit { color: var(--text-muted); }
+
+.consumed-preview {
+  margin: 4px 2px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.primary-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 13px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.ghost-btn {
+  padding: 10px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* --- 記録リスト --- */
+.record-list { list-style: none; margin: 6px 0; padding: 0; }
+
+.record-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.record-emoji { font-size: 1.2rem; }
+.record-main { flex: 1; min-width: 0; }
+.record-amount { font-weight: 700; }
+.record-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delete-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 6px;
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 14px 2px 6px;
+}
+
+.day-totals { font-variant-numeric: tabular-nums; }
+
+.empty-note { color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 18px 0; }
+
+/* --- グラフ --- */
+.range-toggle { display: flex; gap: 8px; margin: 10px 0 2px; }
+
+.range-btn {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.range-btn.is-active {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.chart-card { padding: 12px 8px 6px; }
+
+.chart-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin: 0 8px 4px;
+}
+
+.swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.swatch-food { background: var(--series-food); }
+.swatch-water { background: var(--series-water); }
+.swatch-weight { background: var(--series-weight); }
+.swatch-snack { background: var(--series-snack); }
+.swatch-temp { background: var(--series-temp); }
+
+.chart-box { position: relative; }
+.trend-svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
+
+.grid-line { stroke: var(--grid); stroke-width: 1; }
+.baseline { stroke: var(--baseline); stroke-width: 1; }
+.axis-label {
+  fill: var(--text-muted);
+  font-size: 9px;
+  font-family: system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.last-label {
+  fill: var(--text-primary);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: system-ui, sans-serif;
+}
+.crosshair { stroke: var(--baseline); stroke-width: 1; stroke-dasharray: 3 3; }
+
+.chart-tip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  background: var(--text-primary);
+  color: var(--page);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 8px;
+  border-radius: 6px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.hint { font-size: 0.78rem; color: var(--text-muted); margin: 8px 2px; }
+
+/* --- 複数のお皿 --- */
+.bowl-item { margin-bottom: 6px; }
+
+.bowl-item.is-saved {
+  border-left: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  padding-left: 8px;
+  border-radius: 3px;
+}
+
+.bowl-row-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: 2px 0 -4px;
+}
+
+.bowl-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 4px;
+}
+
+.bowl-row label { flex: 1; min-width: 0; margin: 4px 0; }
+.bowl-row .bowl-name { flex: 1.3; }
+
+.row-del {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1rem;
+  padding: 10px 4px;
+  cursor: pointer;
+}
+
+.add-row-btn { width: 100%; margin: 6px 0 2px; }
+
+/* --- 今日のかめ(日記) --- */
+.diary-row { display: flex; gap: 12px; }
+
+.photo-pick {
+  flex: 0 0 92px;
+  height: 92px;
+  border: 1px dashed var(--baseline);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  overflow: hidden;
+  margin: 4px 0;
+}
+
+.photo-pick img { width: 100%; height: 100%; object-fit: cover; }
+
+.diary-fields { flex: 1; min-width: 0; }
+
+.record-photo {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 10px;
+  margin-top: 6px;
+  display: block;
+}
+
+/* --- 月の選択 --- */
+.month-nav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 10px 0 0;
+}
+
+.month-nav input { flex: 1; margin-top: 0; text-align: center; }
+.month-nav .ghost-btn { flex: 0 0 44px; padding: 10px 0; }
+
+/* --- トイレ記録 --- */
+.toilet-row { display: flex; gap: 10px; }
+
+.toilet-btn {
+  flex: 1;
+  padding: 14px 4px;
+  font-size: 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--page);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.toilet-btn:active { background: color-mix(in srgb, var(--accent) 15%, var(--page)); }
+.toilet-btn b { font-size: 1.2rem; }
+
+/* --- 週平均の表 --- */
+.week-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.week-table th {
+  text-align: right;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--grid);
+}
+
+.week-table th:first-child, .week-table td:first-child { text-align: left; }
+
+.week-table td {
+  text-align: right;
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--grid);
+  font-variant-numeric: tabular-nums;
+}
+
+.week-table tr:last-child td { border-bottom: none; font-weight: 700; }
+
+/* --- りれき(日付フィルタ) --- */
+.history-filter { display: flex; gap: 10px; align-items: flex-end; }
+.history-filter label { flex: 1; margin: 0; }
+.history-filter .ghost-btn { flex: 0 0 auto; }
+
+/* --- マイページ --- */
+.profile-card { display: flex; gap: 14px; align-items: center; }
+
+.avatar-pick {
+  flex: 0 0 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  overflow: hidden;
+  cursor: pointer;
+  margin: 0;
+}
+
+.avatar-pick img { width: 100%; height: 100%; object-fit: cover; }
+
+.profile-head h2 { margin: 0 0 4px; font-size: 1.2rem; }
+.profile-head .hint { margin: 0; }
+
+.health-list { list-style: none; margin: 0; padding: 0; }
+
+.health-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 0.85rem;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border-left: 4px solid var(--baseline);
+  background: var(--page);
+  margin-bottom: 8px;
+}
+
+.health-item.is-good { border-left-color: var(--status-good); }
+.health-item.is-warning { border-left-color: var(--status-warning); }
+
+#consult-text {
+  margin-top: 10px;
+  font-size: 0.78rem;
+}
+
+#consult-copy { width: 100%; margin-top: 8px; }
+
+/* --- フード登録 --- */
+.food-defs { list-style: none; margin: 0 0 8px; padding: 0; }
+
+.food-def-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.food-def-item .food-def-name { flex: 1; }
+.food-def-item .food-def-amount { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+#food-add { width: 100%; margin-top: 6px; }
+
+/* --- タブバー --- */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--surface-1);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 8px 0 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+.tab-btn span { font-size: 0.65rem; }
+.tab-btn.is-active { color: var(--accent); font-weight: 700; }
