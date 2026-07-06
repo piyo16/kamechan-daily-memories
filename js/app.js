@@ -32,18 +32,10 @@
     { id: "yozora", label: "よぞら", swatch: "#1c2438" },
   ];
 
-  var FONTS = [
-    { id: "", label: "標準", cls: "" },
-    { id: "maru", label: "まるやか", cls: "font-maru" },
-    { id: "mincho", label: "明朝", cls: "font-mincho" },
-  ];
-
   function applyAppearance() {
     var s = S.getSettings();
     if (s.theme) document.body.dataset.theme = s.theme;
     else delete document.body.dataset.theme;
-    if (s.font) document.body.dataset.font = s.font;
-    else delete document.body.dataset.font;
   }
 
   function currentMonth() {
@@ -514,23 +506,6 @@
         renderAppearanceChoices();
       });
       themeBox.appendChild(btn);
-    });
-
-    var fontBox = $("font-select");
-    fontBox.innerHTML = "";
-    FONTS.forEach(function (f) {
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "choice-btn " + f.cls + ((s.font || "") === f.id ? " is-active" : "");
-      btn.textContent = f.label;
-      btn.addEventListener("click", function () {
-        var cur = S.getSettings();
-        cur.font = f.id;
-        S.setSettings(cur);
-        applyAppearance();
-        renderAppearanceChoices();
-      });
-      fontBox.appendChild(btn);
     });
   }
 

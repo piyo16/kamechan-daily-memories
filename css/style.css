@@ -654,16 +654,6 @@ body[data-theme="yozora"] {
   --accent: #7f9aff;
 }
 
-/* フォント */
-body[data-font="maru"], .font-maru {
-  font-family: ui-rounded, "Hiragino Maru Gothic ProN", "HG Maru Gothic M PRO",
-    "M PLUS Rounded 1c", system-ui, sans-serif;
-}
-
-body[data-font="mincho"], .font-mincho {
-  font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
-}
-
 /* --- タブバー --- */
 .tab-bar {
   position: fixed;
