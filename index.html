@@ -29,6 +29,10 @@
           <span class="tile-label">今日の水</span>
           <span class="tile-value"><b id="today-water">0</b> ml</span>
         </div>
+        <div class="tile" id="kcal-tile" hidden>
+          <span class="tile-label">カロリー</span>
+          <span class="tile-value"><b id="today-kcal">0</b> kcal</span>
+        </div>
       </div>
 
       <form id="record-form" class="card">
@@ -123,6 +127,10 @@
         <h2 class="chart-title"><span class="swatch swatch-snack"></span>おやつ(g / 日)</h2>
         <div id="chart-snack" class="chart-box"></div>
       </div>
+      <div class="card chart-card" id="kcal-card" hidden>
+        <h2 class="chart-title"><span class="swatch swatch-kcal"></span>カロリー(kcal / 日)</h2>
+        <div id="chart-kcal" class="chart-box"></div>
+      </div>
       <div class="card chart-card" id="weight-card" hidden>
         <h2 class="chart-title"><span class="swatch swatch-weight"></span>体重(kg)</h2>
         <div id="chart-weight" class="chart-box"></div>
@@ -150,7 +158,13 @@
       <div class="card history-filter">
         <label>日付をえらんで見る
           <span class="date-pick-btn">
-            <span id="history-date-label">📅 日付をえらぶ</span>
+            <svg class="date-pick-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+              <line x1="8" y1="2.5" x2="8" y2="6.5"></line>
+              <line x1="16" y1="2.5" x2="16" y2="6.5"></line>
+            </svg>
+            <span id="history-date-label">日付をえらぶ</span>
             <input type="date" id="history-date">
           </span>
         </label>
@@ -237,14 +251,17 @@
 
       <div class="card">
         <h2 class="card-title">フードの登録</h2>
-        <p class="hint">登録すると「ごはん」の名前欄で選べて、いつもの量が自動入力されます。</p>
+        <p class="hint">登録すると「ごはん」「おやつ」の名前欄で選べて、いつもの量が自動入力されます。カロリーを登録すると、きろくとグラフに1日のカロリーが出ます。</p>
         <ul id="food-defs" class="food-defs"></ul>
+        <label>フード名
+          <input type="text" id="food-name" placeholder="例: カリカリ">
+        </label>
         <div class="field-row">
-          <label>フード名
-            <input type="text" id="food-name" placeholder="例: カリカリ">
-          </label>
           <label>いつもの量 g
             <input type="number" id="food-amount" inputmode="decimal" min="0" step="0.1" placeholder="例: 25">
+          </label>
+          <label>カロリー kcal/100g
+            <input type="number" id="food-kcal" inputmode="decimal" min="0" step="1" placeholder="例: 360">
           </label>
         </div>
         <button type="button" id="food-add" class="ghost-btn">＋ 登録する</button>

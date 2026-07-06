@@ -219,6 +219,27 @@
     return out;
   }
 
+  /*
+   * 日別カロリー: { "YYYY-MM-DD": kcal }
+   * フード登録(foodDefs: [{name, amount, kcal100}])の kcal100(100gあたりのカロリー)と
+   * ごはん・おやつ記録の摂取量から計算する。カロリー未登録のフードは含めない。
+   */
+  function dailyKcal(records, foodDefs) {
+    var per100 = {};
+    (foodDefs || []).forEach(function (f) {
+      if (f && f.name && Number(f.kcal100) > 0) per100[f.name] = Number(f.kcal100);
+    });
+    var out = {};
+    liveRecords(records).forEach(function (r) {
+      if (r.type !== "food" && r.type !== "snack") return;
+      var k100 = per100[r.label];
+      if (!k100) return;
+      var k = dayKey(r.ts);
+      out[k] = round1((out[k] || 0) + (Number(r.amount) || 0) * k100 / 100);
+    });
+    return out;
+  }
+
   // トイレ記録の日別回数: { "YYYY-MM-DD": { pee: 3, poop: 1 } }
   function dailyToiletCounts(records) {
     var out = {};
@@ -405,6 +426,7 @@
     tempSeries: tempSeries,
     daysOfMonth: daysOfMonth,
     weeklyStatsForMonth: weeklyStatsForMonth,
+    dailyKcal: dailyKcal,
     dailyToiletCounts: dailyToiletCounts,
     healthCheck: healthCheck,
     ageLabel: ageLabel,

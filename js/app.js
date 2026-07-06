@@ -138,9 +138,12 @@
     function isTextField(el) {
       if (!el || !el.tagName) return false;
       var tag = el.tagName;
-      if (tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (tag === "TEXTAREA") return true;
       if (tag !== "INPUT") return false;
-      return ["checkbox", "radio", "button", "submit", "file", "range"].indexOf(el.type) < 0;
+      // 日付・selectなどはピッカーが開くだけで文字キーボードは出ない上、
+      // iOSではピッカーを閉じてもフォーカスが残りタブバーが消えたままになる
+      return ["checkbox", "radio", "button", "submit", "file", "range",
+        "date", "month", "datetime-local", "time"].indexOf(el.type) < 0;
     }
 
     document.addEventListener("focusin", function (e) {
@@ -158,9 +161,21 @@
     if (window.visualViewport) {
       var vv = window.visualViewport;
       var maxHeight = vv.height;
+      var restoreTimer = null;
       vv.addEventListener("resize", function () {
         maxHeight = Math.max(maxHeight, vv.height);
         viewportHide = maxHeight - vv.height > 150;
+        clearTimeout(restoreTimer);
+        if (!viewportHide) {
+          // ビューポートが元の高さに戻った=キーボードは閉じている。
+          // iOSはキーボードを畳んでもblurが起きないことがあり、
+          // フォーカス由来の非表示が残ってタブバーが消えたままになるため、
+          // 少し待って安定していたら強制的に表示に戻す。
+          restoreTimer = setTimeout(function () {
+            focusHide = false;
+            apply();
+          }, 250);
+        }
         apply();
       });
       // 画面回転で基準の高さが変わるためリセット
@@ -292,6 +307,11 @@
     $("toilet-pee-count").textContent = toilet.pee;
     $("toilet-poop-count").textContent = toilet.poop;
 
+    // 今日のカロリー(カロリー登録があるフードの分だけ)
+    var kcal = C.dailyKcal(records, S.getSettings().foods)[todayKey] || 0;
+    $("kcal-tile").hidden = kcal <= 0;
+    $("today-kcal").textContent = Math.round(kcal);
+
     // 入力途中(未保存)の内容を消さないよう、編集中は行を作り直さない
     if (!isBowlAreaDirty()) rebuildBowlRows(records);
 
@@ -311,6 +331,7 @@
     var weeks = C.weeklyStatsForMonth(records, ym).filter(function (w) {
       return w.start <= todayKey;
     });
+    var kcalMap = C.dailyKcal(records, S.getSettings().foods);
     var s = {};
 
     if (state.chartMode === "day") {
@@ -320,12 +341,24 @@
       s.food = days.map(function (d) { return { day: d.day, value: d.food }; });
       s.water = days.map(function (d) { return { day: d.day, value: d.water }; });
       s.snack = days.map(function (d) { return { day: d.day, value: d.snack }; });
+      s.kcal = days.map(function (d) { return { day: d.day, value: Math.round(kcalMap[d.day] || 0) }; });
       s.weight = C.weightSeries(records).filter(function (p) { return p.day.slice(0, 7) === ym; });
       s.temp = C.tempSeries(records).filter(function (p) { return p.day.slice(0, 7) === ym; });
     } else {
       s.food = weeks.map(function (w) { return { day: w.start, value: w.food }; });
       s.water = weeks.map(function (w) { return { day: w.start, value: w.water }; });
       s.snack = weeks.map(function (w) { return { day: w.start, value: w.snack }; });
+      // カロリーの週平均(記録がある日だけで平均)
+      s.kcal = weeks.map(function (w) {
+        var start = new Date(w.start + "T00:00:00");
+        var sum = 0, days = 0;
+        for (var i = 0; i < 7; i++) {
+          var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+          var v = kcalMap[C.dayKey(d)] || 0;
+          if (v > 0) { sum += v; days++; }
+        }
+        return { day: w.start, value: days ? Math.round(sum / days) : 0 };
+      });
       s.weight = weeks.filter(function (w) { return w.weight > 0; })
         .map(function (w) { return { day: w.start, value: w.weight }; });
       s.temp = weeks.filter(function (w) { return w.temp > 0; })
@@ -345,6 +378,14 @@
     if (hasSnack) {
       KameChart.renderTrend($("chart-snack"), {
         data: s.snack, unit: "g", color: "--series-snack", title: "おやつ" + perDay,
+      });
+    }
+
+    var hasKcal = s.kcal.some(function (d) { return d.value > 0; });
+    $("kcal-card").hidden = !hasKcal;
+    if (hasKcal) {
+      KameChart.renderTrend($("chart-kcal"), {
+        data: s.kcal, unit: "kcal", color: "--series-kcal", title: "カロリー" + perDay,
       });
     }
 
@@ -525,9 +566,12 @@
     s.foods.forEach(function (f, idx) {
       var li = document.createElement("li");
       li.className = "food-def-item";
+      var info = [];
+      if (f.amount) info.push(f.amount + " g");
+      if (f.kcal100) info.push(f.kcal100 + " kcal/100g");
       li.innerHTML =
         '<span class="food-def-name">' + escapeHtml(f.name) + "</span>" +
-        '<span class="food-def-amount">' + (f.amount ? f.amount + " g" : "") + "</span>";
+        '<span class="food-def-amount">' + info.join(" · ") + "</span>";
       var del = document.createElement("button");
       del.className = "delete-btn";
       del.textContent = "✕";
@@ -926,10 +970,15 @@
       if (!name) return;
       var s = S.getSettings();
       s.foods = s.foods.filter(function (f) { return f.name !== name; });
-      s.foods.push({ name: name, amount: Number($("food-amount").value) || 0 });
+      s.foods.push({
+        name: name,
+        amount: Number($("food-amount").value) || 0,
+        kcal100: Number($("food-kcal").value) || 0,
+      });
       S.setSettings(s);
       $("food-name").value = "";
       $("food-amount").value = "";
+      $("food-kcal").value = "";
       renderSettings();
     });
 
@@ -971,11 +1020,18 @@
 
   function updateHistoryDateLabel() {
     $("history-date-label").textContent = state.historyDate
-      ? "📅 " + dayLabel(state.historyDate) + " をえらび中"
-      : "📅 日付をえらぶ";
+      ? dayLabel(state.historyDate) + " をえらび中"
+      : "日付をえらぶ";
   }
 
   function bindHistory() {
+    // 透明にした日付inputがタップを拾えない環境向けの保険
+    $("history-date").parentElement.addEventListener("click", function (e) {
+      var input = $("history-date");
+      if (e.target !== input && input.showPicker) {
+        try { input.showPicker(); } catch (err) {}
+      }
+    });
     $("history-date").addEventListener("change", function (e) {
       state.historyDate = e.target.value;
       updateHistoryDateLabel();

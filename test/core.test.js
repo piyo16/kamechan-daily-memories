@@ -188,4 +188,24 @@ assert.strictEqual(tc["2026-07-04"], undefined);
 // トイレは量の集計に入らない
 assert.strictEqual(C.dailyTotals(toiletRecs)["2026-07-05"], undefined);
 
+// dailyKcal: フード登録のkcal/100gと摂取量からカロリーを日別集計
+const kcalDefs = [
+  { name: "カリカリ", amount: 25, kcal100: 360 },
+  { name: "ちゅ〜る", amount: 14, kcal100: 50 },
+  { name: "カロリー未登録", amount: 20 },
+];
+const kcalRecs = [
+  { id: "k1", ts: "2026-07-05T08:00:00", type: "food", label: "カリカリ", amount: 50, updatedAt: "1" },
+  { id: "k2", ts: "2026-07-05T15:00:00", type: "snack", label: "ちゅ〜る", amount: 14, updatedAt: "1" },
+  { id: "k3", ts: "2026-07-05T18:00:00", type: "food", label: "カロリー未登録", amount: 30, updatedAt: "1" },
+  { id: "k4", ts: "2026-07-05T19:00:00", type: "water", label: "カリカリ", amount: 60, updatedAt: "1" },
+  { id: "k5", ts: "2026-07-04T08:00:00", type: "food", label: "カリカリ", amount: 25, updatedAt: "1" },
+  { id: "k6", ts: "2026-07-03T08:00:00", type: "food", label: "カリカリ", amount: 999, updatedAt: "1", deleted: true },
+];
+const kcal = C.dailyKcal(kcalRecs, kcalDefs);
+assert.strictEqual(kcal["2026-07-05"], 187); // 50g*3.6 + 14g*0.5 = 180+7
+assert.strictEqual(kcal["2026-07-04"], 90);  // 25g*3.6
+assert.strictEqual(kcal["2026-07-03"], undefined); // 削除済みは除外
+assert.deepStrictEqual(C.dailyKcal(kcalRecs, []), {}); // 登録なしなら空
+
 console.log("all tests passed ✔");

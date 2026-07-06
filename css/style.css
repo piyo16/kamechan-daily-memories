@@ -14,6 +14,7 @@
   --series-weight: #eda100; /* categorical slot 3: yellow */
   --series-snack: #4a3aa7;  /* categorical slot 5: violet */
   --series-temp: #e34948;   /* categorical slot 6: red */
+  --series-kcal: #c95d1a;   /* categorical slot 7: orange */
   --status-good: #0ca30c;
   --status-warning: #fab219;
   --accent: #2a78d6;
@@ -34,6 +35,7 @@
     --series-weight: #c98500;
     --series-snack: #9085e9;
     --series-temp: #e66767;
+    --series-kcal: #dd8340;
     --accent: #3987e5;
   }
 }
@@ -92,9 +94,9 @@ main { padding: 0 14px; max-width: 480px; margin: 0 auto; }
   gap: 2px;
 }
 
-.tile-label { font-size: 0.75rem; color: var(--text-secondary); }
-.tile-value { font-size: 0.95rem; color: var(--text-secondary); }
-.tile-value b { font-size: 1.7rem; color: var(--text-primary); font-weight: 700; }
+.tile-label { font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap; }
+.tile-value { font-size: 0.9rem; color: var(--text-secondary); white-space: nowrap; }
+.tile-value b { font-size: 1.6rem; color: var(--text-primary); font-weight: 700; }
 
 /* --- 入力フォーム --- */
 .type-select { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -332,6 +334,7 @@ input[type="datetime-local"] {
 .swatch-weight { background: var(--series-weight); }
 .swatch-snack { background: var(--series-snack); }
 .swatch-temp { background: var(--series-temp); }
+.swatch-kcal { background: var(--series-kcal); }
 
 .chart-box { position: relative; }
 .trend-svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
@@ -510,6 +513,16 @@ input[type="datetime-local"] {
   font-size: 0.95rem;
   font-weight: 700;
   background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.date-pick-icon {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
 .date-pick-btn input {
