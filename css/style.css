@@ -187,6 +187,42 @@ input[type="datetime-local"] {
   cursor: pointer;
 }
 
+/* --- フード候補(独自ドロップダウン。iOSはdatalistが実質使えないため) --- */
+.bowl-name { position: relative; }
+
+.food-suggest {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 220px;
+  max-width: calc(100vw - 60px);
+  z-index: 30;
+  margin-top: 4px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+.food-suggest-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.food-suggest-item + .food-suggest-item { border-top: 1px solid var(--border); }
+.food-suggest-item .food-suggest-amount { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
 /* --- 記録リスト --- */
 .record-list { list-style: none; margin: 6px 0; padding: 0; }
 
@@ -220,6 +256,32 @@ input[type="datetime-local"] {
   cursor: pointer;
   padding: 6px;
 }
+
+/* --- えらんで削除(複数選択) --- */
+.select-bar { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+.select-bar > * { flex: 1 1 auto; }
+
+.danger-btn {
+  padding: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  background: #d43c3c;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.record-check {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+.record-item.is-selectable { cursor: pointer; }
 
 .day-header {
   display: flex;
@@ -497,6 +559,110 @@ input[type="datetime-local"] {
 .food-def-item .food-def-amount { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 
 #food-add { width: 100%; margin-top: 6px; }
+
+/* --- きせかえ(背景テーマ・フォント) --- */
+.choice-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+.choice-btn {
+  flex: 1 0 calc(33.3% - 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--page);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.choice-btn.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+  font-weight: 700;
+}
+
+.choice-swatch {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+/* 背景テーマ。CSS変数をbodyで上書きする(選択時はシステムのダーク設定より優先) */
+body[data-theme="sakura"] {
+  --page: #faeef3;
+  --surface-1: #fffbfd;
+  --text-primary: #29181e;
+  --text-secondary: #5d4a52;
+  --text-muted: #8f7b83;
+  --grid: #ecdbe2;
+  --baseline: #d3bcc6;
+  --border: rgba(60, 20, 35, 0.12);
+  --accent: #c94f86;
+}
+
+body[data-theme="sora"] {
+  --page: #eaf3fb;
+  --surface-1: #fbfdff;
+  --text-primary: #14202b;
+  --text-secondary: #46586a;
+  --text-muted: #7a8a99;
+  --grid: #d8e5f0;
+  --baseline: #b8ccdd;
+  --border: rgba(15, 45, 75, 0.12);
+  --accent: #2a78d6;
+}
+
+body[data-theme="wakaba"] {
+  --page: #ecf5ea;
+  --surface-1: #fbfefa;
+  --text-primary: #16231a;
+  --text-secondary: #4a5c4e;
+  --text-muted: #7d8d80;
+  --grid: #dbe8d8;
+  --baseline: #bccfb8;
+  --border: rgba(20, 60, 30, 0.12);
+  --accent: #2e8b46;
+}
+
+body[data-theme="mikan"] {
+  --page: #fbf1e4;
+  --surface-1: #fffdf8;
+  --text-primary: #2b2014;
+  --text-secondary: #61533f;
+  --text-muted: #92836c;
+  --grid: #eee0cc;
+  --baseline: #d8c4a6;
+  --border: rgba(75, 50, 15, 0.12);
+  --accent: #d97b1c;
+}
+
+body[data-theme="yozora"] {
+  --page: #10141f;
+  --surface-1: #1a2030;
+  --text-primary: #f2f4fa;
+  --text-secondary: #b9c0d4;
+  --text-muted: #8791a8;
+  --grid: #262e42;
+  --baseline: #39415a;
+  --border: rgba(255, 255, 255, 0.12);
+  --accent: #7f9aff;
+}
+
+/* フォント */
+body[data-font="maru"], .font-maru {
+  font-family: ui-rounded, "Hiragino Maru Gothic ProN", "HG Maru Gothic M PRO",
+    "M PLUS Rounded 1c", system-ui, sans-serif;
+}
+
+body[data-font="mincho"], .font-mincho {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+}
 
 /* --- タブバー --- */
 .tab-bar {

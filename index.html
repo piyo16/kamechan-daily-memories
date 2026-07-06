@@ -39,7 +39,6 @@
         </div>
 
         <div id="bowl-rows"></div>
-        <datalist id="food-list"></datalist>
 
         <button type="button" id="add-row" class="ghost-btn add-row-btn">＋ お皿を追加</button>
         <p class="consumed-preview" id="consumed-preview" hidden></p>
@@ -154,6 +153,12 @@
         </label>
         <button type="button" id="history-clear" class="ghost-btn" hidden>すべて表示</button>
       </div>
+      <div class="select-bar">
+        <button type="button" id="select-mode" class="ghost-btn">☑️ えらんで削除</button>
+        <button type="button" id="select-all" class="ghost-btn" hidden>すべて選択</button>
+        <button type="button" id="select-delete" class="danger-btn" hidden>🗑 削除 (0)</button>
+        <button type="button" id="select-cancel" class="ghost-btn" hidden>やめる</button>
+      </div>
       <div id="history-list-box"></div>
     </section>
 
@@ -219,6 +224,14 @@
         <label>記録した人の名前(入力欄の初期値になります)
           <input type="text" id="setting-by">
         </label>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">🎨 きせかえ</h2>
+        <label>背景の色</label>
+        <div class="choice-row" id="theme-select"></div>
+        <label>フォント</label>
+        <div class="choice-row" id="font-select"></div>
       </div>
 
       <div class="card">

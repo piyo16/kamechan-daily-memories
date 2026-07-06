@@ -14,7 +14,37 @@
     chartMode: "week", // "week" | "day"
     historyDate: "", // りれきの日付フィルタ("" = 全部)
     stagedPhoto: null, // 「今日のかめ」で選択中の写真dataURL
+    selectMode: false, // りれきの複数選択モード
+    selected: {}, // 選択中の記録id → true
   };
+
+  // りれきに現在表示中の記録id(「すべて選択」の対象)
+  var historyIds = [];
+
+  // ---- きせかえ ----
+
+  var THEMES = [
+    { id: "", label: "おまかせ", swatch: "linear-gradient(90deg, #f9f9f7 50%, #0d0d0d 50%)" },
+    { id: "sakura", label: "さくら", swatch: "#f6cede" },
+    { id: "sora", label: "そら", swatch: "#c3ddf3" },
+    { id: "wakaba", label: "わかば", swatch: "#cbe6c6" },
+    { id: "mikan", label: "みかん", swatch: "#f7ddb5" },
+    { id: "yozora", label: "よぞら", swatch: "#1c2438" },
+  ];
+
+  var FONTS = [
+    { id: "", label: "標準", cls: "" },
+    { id: "maru", label: "まるやか", cls: "font-maru" },
+    { id: "mincho", label: "明朝", cls: "font-mincho" },
+  ];
+
+  function applyAppearance() {
+    var s = S.getSettings();
+    if (s.theme) document.body.dataset.theme = s.theme;
+    else delete document.body.dataset.theme;
+    if (s.font) document.body.dataset.font = s.font;
+    else delete document.body.dataset.font;
+  }
 
   function currentMonth() {
     var d = new Date();
@@ -174,9 +204,10 @@
     if (state.tab === "settings") renderSettings();
   }
 
-  function recordItem(r) {
+  function recordItem(r, selectable) {
     var li = document.createElement("li");
     li.className = "record-item";
+    var selecting = selectable && state.selectMode;
 
     var main = document.createElement("div");
     main.className = "record-main";
@@ -217,6 +248,28 @@
       li.appendChild(main);
     }
 
+    if (selecting) {
+      // 選択モード: 先頭にチェックボックス、行のどこを押しても選択できる
+      var check = document.createElement("input");
+      check.type = "checkbox";
+      check.className = "record-check";
+      check.checked = !!state.selected[r.id];
+      check.setAttribute("aria-label", "この記録を選択");
+      check.addEventListener("change", function () {
+        if (check.checked) state.selected[r.id] = true;
+        else delete state.selected[r.id];
+        updateSelectBar();
+      });
+      li.insertBefore(check, li.firstChild);
+      li.classList.add("is-selectable");
+      li.addEventListener("click", function (e) {
+        if (e.target === check) return;
+        check.checked = !check.checked;
+        check.dispatchEvent(new Event("change"));
+      });
+      return li;
+    }
+
     var del = document.createElement("button");
     del.className = "delete-btn";
     del.textContent = "✕";
@@ -246,8 +299,6 @@
     var toilet = C.dailyToiletCounts(records)[todayKey] || { pee: 0, poop: 0 };
     $("toilet-pee-count").textContent = toilet.pee;
     $("toilet-poop-count").textContent = toilet.poop;
-
-    renderFoodDatalist();
 
     // 入力途中(未保存)の内容を消さないよう、編集中は行を作り直さない
     if (!isBowlAreaDirty()) rebuildBowlRows(records);
@@ -339,17 +390,20 @@
     var box = $("history-list-box");
     box.innerHTML = "";
     $("history-clear").hidden = !state.historyDate;
+    historyIds = [];
 
     var target = listable(records);
     if (state.historyDate) {
       target = target.filter(function (r) { return C.dayKey(r.ts) === state.historyDate; });
       if (target.length === 0) {
         box.innerHTML = '<p class="empty-note">' + dayLabel(state.historyDate) + " の記録はありません</p>";
+        updateSelectBar();
         return;
       }
     }
     if (target.length === 0) {
       box.innerHTML = '<p class="empty-note">記録がたまると、ここで振り返れます</p>';
+      updateSelectBar();
       return;
     }
 
@@ -371,9 +425,28 @@
       ul.className = "record-list";
       byDay[k]
         .sort(function (a, b) { return a.ts < b.ts ? 1 : -1; })
-        .forEach(function (r) { ul.appendChild(recordItem(r)); });
+        .forEach(function (r) {
+          historyIds.push(r.id);
+          ul.appendChild(recordItem(r, true));
+        });
       box.appendChild(ul);
     });
+    updateSelectBar();
+  }
+
+  function updateSelectBar() {
+    $("select-mode").hidden = state.selectMode;
+    $("select-all").hidden = !state.selectMode;
+    $("select-delete").hidden = !state.selectMode;
+    $("select-cancel").hidden = !state.selectMode;
+    $("select-mode").disabled = historyIds.length === 0;
+    if (!state.selectMode) return;
+    var n = Object.keys(state.selected).length;
+    var allSelected = historyIds.length > 0 && historyIds.every(function (id) {
+      return state.selected[id];
+    });
+    $("select-all").textContent = allSelected ? "選択を解除" : "すべて選択";
+    $("select-delete").textContent = "🗑 削除 (" + n + ")";
   }
 
   function renderMypage(records) {
@@ -418,8 +491,52 @@
     $("p-diseases").value = p.diseases || "";
   }
 
+  // きせかえの選択ボタン(背景・フォント)を描く
+  function renderAppearanceChoices() {
+    var s = S.getSettings();
+
+    var themeBox = $("theme-select");
+    themeBox.innerHTML = "";
+    THEMES.forEach(function (t) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "choice-btn" + ((s.theme || "") === t.id ? " is-active" : "");
+      var sw = document.createElement("span");
+      sw.className = "choice-swatch";
+      sw.style.background = t.swatch;
+      btn.appendChild(sw);
+      btn.appendChild(document.createTextNode(t.label));
+      btn.addEventListener("click", function () {
+        var cur = S.getSettings();
+        cur.theme = t.id;
+        S.setSettings(cur);
+        applyAppearance();
+        renderAppearanceChoices();
+      });
+      themeBox.appendChild(btn);
+    });
+
+    var fontBox = $("font-select");
+    fontBox.innerHTML = "";
+    FONTS.forEach(function (f) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "choice-btn " + f.cls + ((s.font || "") === f.id ? " is-active" : "");
+      btn.textContent = f.label;
+      btn.addEventListener("click", function () {
+        var cur = S.getSettings();
+        cur.font = f.id;
+        S.setSettings(cur);
+        applyAppearance();
+        renderAppearanceChoices();
+      });
+      fontBox.appendChild(btn);
+    });
+  }
+
   function renderSettings() {
     var s = S.getSettings();
+    renderAppearanceChoices();
     $("setting-by").value = s.by || "";
     $("setting-gas-url").value = s.gasUrl || "";
     $("setting-gas-token").value = s.gasToken || "";
@@ -443,20 +560,54 @@
         s.foods.splice(idx, 1);
         S.setSettings(s);
         renderSettings();
-        renderFoodDatalist();
       });
       li.appendChild(del);
       ul.appendChild(li);
     });
   }
 
-  function renderFoodDatalist() {
-    var dl = $("food-list");
-    dl.innerHTML = "";
-    S.getSettings().foods.forEach(function (f) {
-      var opt = document.createElement("option");
-      opt.value = f.name;
-      dl.appendChild(opt);
+  // フード名欄に独自の候補ドロップダウンを付ける。
+  // (<datalist>はiOS Safariでドロップダウン表示されず実質使えないため)
+  function attachFoodSuggest(nameInput, row) {
+    var panel = document.createElement("div");
+    panel.className = "food-suggest";
+    panel.hidden = true;
+    nameInput.parentElement.appendChild(panel);
+
+    function refresh() {
+      var q = nameInput.value.trim();
+      var hits = S.getSettings().foods.filter(function (f) {
+        return !q || f.name.indexOf(q) >= 0;
+      });
+      panel.innerHTML = "";
+      if (hits.length === 0) {
+        panel.hidden = true;
+        return;
+      }
+      hits.forEach(function (f) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "food-suggest-item";
+        btn.innerHTML = escapeHtml(f.name) +
+          (f.amount ? '<span class="food-suggest-amount">' + f.amount + " g</span>" : "");
+        // 押した瞬間に入力欄のフォーカスが外れてパネルが消えないようにする
+        btn.addEventListener("pointerdown", function (ev) { ev.preventDefault(); });
+        btn.addEventListener("click", function () {
+          nameInput.value = f.name;
+          var given = row.querySelector(".in-given");
+          if (f.amount && !given.value) given.value = f.amount;
+          panel.hidden = true;
+          updateTotalPreview();
+        });
+        panel.appendChild(btn);
+      });
+      panel.hidden = false;
+    }
+
+    nameInput.addEventListener("focus", refresh);
+    nameInput.addEventListener("input", refresh);
+    nameInput.addEventListener("blur", function () {
+      setTimeout(function () { panel.hidden = true; }, 150);
     });
   }
 
@@ -510,7 +661,7 @@
     row.className = "bowl-row";
     row.innerHTML =
       '<label class="bowl-name">' + (isFood ? "フード名" : "場所(任意)") +
-      '<input type="text" class="in-name" ' + (isFood ? 'list="food-list"' : "") +
+      '<input type="text" class="in-name"' +
       ' placeholder="' + (isFood ? "カリカリ" : "リビング") + '"></label>' +
       "<label>あげた量 " + unit +
       '<input type="number" class="in-given" inputmode="decimal" min="0" step="0.1" placeholder="50"></label>' +
@@ -553,6 +704,8 @@
     });
     row.querySelector(".in-given").addEventListener("input", updateTotalPreview);
     row.querySelector(".in-left").addEventListener("input", updateTotalPreview);
+
+    if (isFood) attachFoodSuggest(row.querySelector(".in-name"), row);
 
     item.appendChild(row);
     $("bowl-rows").appendChild(item);
@@ -803,7 +956,6 @@
       $("food-name").value = "";
       $("food-amount").value = "";
       renderSettings();
-      renderFoodDatalist();
     });
 
     $("sync-now").addEventListener("click", function () {
@@ -850,6 +1002,37 @@
     $("history-clear").addEventListener("click", function () {
       state.historyDate = "";
       $("history-date").value = "";
+      render();
+    });
+
+    // 複数選択して削除
+    $("select-mode").addEventListener("click", function () {
+      state.selectMode = true;
+      state.selected = {};
+      render();
+    });
+    $("select-cancel").addEventListener("click", function () {
+      state.selectMode = false;
+      state.selected = {};
+      render();
+    });
+    $("select-all").addEventListener("click", function () {
+      var allSelected = historyIds.length > 0 && historyIds.every(function (id) {
+        return state.selected[id];
+      });
+      state.selected = {};
+      if (!allSelected) {
+        historyIds.forEach(function (id) { state.selected[id] = true; });
+      }
+      render();
+    });
+    $("select-delete").addEventListener("click", function () {
+      var ids = Object.keys(state.selected);
+      if (ids.length === 0) return;
+      if (!confirm(ids.length + "件の記録を削除しますか?")) return;
+      ids.forEach(function (id) { S.remove(id); });
+      state.selectMode = false;
+      state.selected = {};
       render();
     });
   }
@@ -912,13 +1095,13 @@
     $("ts").value = nowLocalForInput();
     $("by").value = S.getSettings().by || "";
 
+    applyAppearance();
     bindKeyboardWatch();
     bindForm();
     bindDiary();
     bindMypage();
     bindSettings();
     bindHistory();
-    renderFoodDatalist();
     rebuildBowlRows();
 
     // #charts のようにURLで直接タブを開けるようにする
