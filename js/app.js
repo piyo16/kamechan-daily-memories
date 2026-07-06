@@ -97,18 +97,57 @@
 
   // ---- キーボード対応 ----
 
-  // iOS Safariではソフトキーボードが開いてもfixed要素がレイアウト
-  // ビューポート基準のままで、タブバーが画面中央に浮いて入力欄に
-  // 重なる。ビジュアルビューポートの縮小からキーボードを検知して隠す。
+  // iOS Safariではソフトキーボードが開いてもfixed要素がキーボードを
+  // 避けてくれず、タブバーが画面中央に浮いて入力欄に重なる。
+  // iOSはキーボード表示時に window.innerHeight も一緒に縮むため
+  // innerHeightとの差分では検知できない。そこで
+  //  1) テキスト系入力へのフォーカス(=キーボードが出る操作そのもの)
+  //  2) ビジュアルビューポートが「これまでの最大高さ」より大きく縮んだ
+  // のどちらかでタブバーを隠す。
   function bindKeyboardWatch() {
-    if (!window.visualViewport) return;
     var tabBar = document.querySelector(".tab-bar");
-    function update() {
-      var keyboardOpen = window.innerHeight - window.visualViewport.height > 150;
-      tabBar.classList.toggle("is-keyboard-open", keyboardOpen);
+    var focusHide = false;
+    var viewportHide = false;
+
+    function apply() {
+      tabBar.classList.toggle("is-keyboard-open", focusHide || viewportHide);
     }
-    window.visualViewport.addEventListener("resize", update);
-    update();
+
+    function isTextField(el) {
+      if (!el || !el.tagName) return false;
+      var tag = el.tagName;
+      if (tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (tag !== "INPUT") return false;
+      return ["checkbox", "radio", "button", "submit", "file", "range"].indexOf(el.type) < 0;
+    }
+
+    document.addEventListener("focusin", function (e) {
+      focusHide = isTextField(e.target);
+      apply();
+    });
+    document.addEventListener("focusout", function () {
+      // 次の欄への移動なら直後にfocusinが来るので、少し待ってから判定
+      setTimeout(function () {
+        focusHide = isTextField(document.activeElement);
+        apply();
+      }, 80);
+    });
+
+    if (window.visualViewport) {
+      var vv = window.visualViewport;
+      var maxHeight = vv.height;
+      vv.addEventListener("resize", function () {
+        maxHeight = Math.max(maxHeight, vv.height);
+        viewportHide = maxHeight - vv.height > 150;
+        apply();
+      });
+      // 画面回転で基準の高さが変わるためリセット
+      window.addEventListener("orientationchange", function () {
+        maxHeight = 0;
+        viewportHide = false;
+        apply();
+      });
+    }
   }
 
   // ---- タブ切り替え ----
