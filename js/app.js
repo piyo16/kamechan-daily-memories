@@ -969,14 +969,22 @@
 
   // ---- りれき ----
 
+  function updateHistoryDateLabel() {
+    $("history-date-label").textContent = state.historyDate
+      ? "📅 " + dayLabel(state.historyDate) + " をえらび中"
+      : "📅 日付をえらぶ";
+  }
+
   function bindHistory() {
     $("history-date").addEventListener("change", function (e) {
       state.historyDate = e.target.value;
+      updateHistoryDateLabel();
       render();
     });
     $("history-clear").addEventListener("click", function () {
       state.historyDate = "";
       $("history-date").value = "";
+      updateHistoryDateLabel();
       render();
     });
 
