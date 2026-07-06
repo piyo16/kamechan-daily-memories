@@ -95,6 +95,22 @@
     }).catch(function () {});
   }
 
+  // ---- キーボード対応 ----
+
+  // iOS Safariではソフトキーボードが開いてもfixed要素がレイアウト
+  // ビューポート基準のままで、タブバーが画面中央に浮いて入力欄に
+  // 重なる。ビジュアルビューポートの縮小からキーボードを検知して隠す。
+  function bindKeyboardWatch() {
+    if (!window.visualViewport) return;
+    var tabBar = document.querySelector(".tab-bar");
+    function update() {
+      var keyboardOpen = window.innerHeight - window.visualViewport.height > 150;
+      tabBar.classList.toggle("is-keyboard-open", keyboardOpen);
+    }
+    window.visualViewport.addEventListener("resize", update);
+    update();
+  }
+
   // ---- タブ切り替え ----
 
   function switchTab(tab) {
@@ -857,6 +873,7 @@
     $("ts").value = nowLocalForInput();
     $("by").value = S.getSettings().by || "";
 
+    bindKeyboardWatch();
     bindForm();
     bindDiary();
     bindMypage();

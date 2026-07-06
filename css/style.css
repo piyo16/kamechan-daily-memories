@@ -138,6 +138,16 @@ input, textarea, select {
 
 textarea { resize: vertical; }
 
+/* iOS Safariの日付系inputは固有幅を持ちflexで縮まないため、
+   隣の欄に重なる。appearanceを外して通常のボックスとして扱わせる */
+input[type="date"],
+input[type="month"],
+input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 2.6rem;
+}
+
 .card-title {
   font-size: 0.95rem;
   margin: 0 0 8px;
@@ -516,3 +526,7 @@ textarea { resize: vertical; }
 
 .tab-btn span { font-size: 0.65rem; }
 .tab-btn.is-active { color: var(--accent); font-weight: 700; }
+
+/* キーボード表示中はタブバーを隠す
+   (iOS Safariではfixed要素がキーボードに追従せず画面中央に浮くため) */
+.tab-bar.is-keyboard-open { display: none; }
