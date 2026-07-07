@@ -2,9 +2,10 @@
  * かめちゃん日記 — Googleスプレッドシート同期API (Google Apps Script)
  *
  * セットアップ手順は docs/setup.md を見てください。
- * このスクリプトをスプレッドシートに「拡張機能 > Apps Script」で貼り付け、
- * スクリプトプロパティ TOKEN に合言葉を設定して、ウェブアプリとして
- * デプロイ(全員がアクセス可能・自分として実行)します。
+ * appsscript.json(マニフェスト)とセットで使います。権限は次の3つに絞ってあります:
+ *   - このスプレッドシートのみ(他のシートには一切アクセスできません)
+ *   - このスクリプトが作成したファイルのみ(ドライブの他のファイルには一切アクセスできません)
+ *   - Drive APIへの通信(写真の保存・取得のため)
  *
  * - 記録はシート「records」に1行1レコードで保存(同一idは updatedAt の新しい方が勝つ)
  * - 写真は Googleドライブのフォルダ「かめちゃん日記_photos」に保存(非公開のまま)
@@ -25,11 +26,6 @@ function getSheet_() {
   return sheet;
 }
 
-function getFolder_() {
-  var it = DriveApp.getFoldersByName(PHOTO_FOLDER);
-  return it.hasNext() ? it.next() : DriveApp.createFolder(PHOTO_FOLDER);
-}
-
 function checkToken_(token) {
   var expected = PropertiesService.getScriptProperties().getProperty("TOKEN");
   return expected && token === expected;
@@ -39,6 +35,62 @@ function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+// ---- Drive API(drive.file スコープ: このスクリプトが作ったファイルだけが見える) ----
+
+function driveFetch_(url, options) {
+  options = options || {};
+  options.headers = { Authorization: "Bearer " + ScriptApp.getOAuthToken() };
+  options.muteHttpExceptions = true;
+  var res = UrlFetchApp.fetch(url, options);
+  if (res.getResponseCode() >= 300) {
+    throw new Error("Drive APIエラー " + res.getResponseCode());
+  }
+  return res;
+}
+
+function findByName_(name, extraQuery) {
+  var q = "name='" + String(name).replace(/'/g, "\\'") + "' and trashed=false" + (extraQuery || "");
+  var url = "https://www.googleapis.com/drive/v3/files?q=" + encodeURIComponent(q) + "&fields=files(id,name)";
+  var body = JSON.parse(driveFetch_(url).getContentText());
+  return (body.files && body.files[0]) || null;
+}
+
+function getFolderId_() {
+  var folder = findByName_(PHOTO_FOLDER, " and mimeType='application/vnd.google-apps.folder'");
+  if (folder) return folder.id;
+  var res = driveFetch_("https://www.googleapis.com/drive/v3/files", {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify({ name: PHOTO_FOLDER, mimeType: "application/vnd.google-apps.folder" }),
+  });
+  return JSON.parse(res.getContentText()).id;
+}
+
+function savePhoto_(photoId, dataUrl) {
+  var name = String(photoId) + ".jpg";
+  if (findByName_(name)) return; // すでにある
+  var meta = driveFetch_("https://www.googleapis.com/drive/v3/files", {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify({ name: name, parents: [getFolderId_()], mimeType: "image/jpeg" }),
+  });
+  var fileId = JSON.parse(meta.getContentText()).id;
+  var bytes = Utilities.base64Decode(String(dataUrl).split(",")[1] || "");
+  driveFetch_("https://www.googleapis.com/upload/drive/v3/files/" + fileId + "?uploadType=media", {
+    method: "patch",
+    payload: Utilities.newBlob(bytes, "image/jpeg"),
+  });
+}
+
+function loadPhoto_(photoId) {
+  var file = findByName_(String(photoId) + ".jpg");
+  if (!file) return null;
+  var res = driveFetch_("https://www.googleapis.com/drive/v3/files/" + file.id + "?alt=media");
+  return "data:image/jpeg;base64," + Utilities.base64Encode(res.getContent());
+}
+
+// ---- 記録の読み書き ----
 
 function rowToRecord_(row) {
   return {
@@ -83,10 +135,9 @@ function doGet(e) {
   if (!checkToken_(p.token)) return json_({ error: "合言葉が違います" });
 
   if (p.action === "photo") {
-    var files = getFolder_().getFilesByName(String(p.id) + ".jpg");
-    if (!files.hasNext()) return json_({ error: "写真が見つかりません" });
-    var blob = files.next().getBlob();
-    return json_({ dataUrl: "data:image/jpeg;base64," + Utilities.base64Encode(blob.getBytes()) });
+    var dataUrl = loadPhoto_(p.id);
+    if (!dataUrl) return json_({ error: "写真が見つかりません" });
+    return json_({ dataUrl: dataUrl });
   }
 
   return json_({ records: readAll_() });
@@ -129,14 +180,9 @@ function doPost(e) {
     }
 
     if (body.photos && body.photos.length) {
-      var folder = getFolder_();
       body.photos.forEach(function (p) {
         if (!p || !p.id || !p.dataUrl) return;
-        var name = String(p.id) + ".jpg";
-        if (folder.getFilesByName(name).hasNext()) return; // すでにある
-        var base64 = String(p.dataUrl).split(",")[1] || "";
-        var blob = Utilities.newBlob(Utilities.base64Decode(base64), "image/jpeg", name);
-        folder.createFile(blob);
+        savePhoto_(p.id, p.dataUrl);
       });
     }
   } finally {
