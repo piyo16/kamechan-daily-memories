@@ -207,5 +207,8 @@ assert.strictEqual(kcal["2026-07-05"], 187); // 50g*3.6 + 14g*0.5 = 180+7
 assert.strictEqual(kcal["2026-07-04"], 90);  // 25g*3.6
 assert.strictEqual(kcal["2026-07-03"], undefined); // 削除済みは除外
 assert.deepStrictEqual(C.dailyKcal(kcalRecs, []), {}); // 登録なしなら空
+// 種類別フィルタ
+assert.strictEqual(C.dailyKcal(kcalRecs, kcalDefs, "food")["2026-07-05"], 180);
+assert.strictEqual(C.dailyKcal(kcalRecs, kcalDefs, "snack")["2026-07-05"], 7);
 
 console.log("all tests passed ✔");

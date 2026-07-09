@@ -114,12 +114,13 @@
         <button type="button" class="range-btn is-active" data-mode="week">週ごと</button>
         <button type="button" class="range-btn" data-mode="day">日ごと</button>
       </div>
+      <div class="chart-toggle" id="chart-toggle" aria-label="表示するグラフ"></div>
 
-      <div class="card chart-card">
+      <div class="card chart-card" id="food-card">
         <h2 class="chart-title"><span class="swatch swatch-food"></span>ごはん(g / 日)</h2>
         <div id="chart-food" class="chart-box"></div>
       </div>
-      <div class="card chart-card">
+      <div class="card chart-card" id="water-card">
         <h2 class="chart-title"><span class="swatch swatch-water"></span>水(ml / 日)</h2>
         <div id="chart-water" class="chart-box"></div>
       </div>
@@ -128,8 +129,16 @@
         <div id="chart-snack" class="chart-box"></div>
       </div>
       <div class="card chart-card" id="kcal-card" hidden>
-        <h2 class="chart-title"><span class="swatch swatch-kcal"></span>カロリー(kcal / 日)</h2>
+        <h2 class="chart-title"><span class="swatch swatch-kcal"></span>カロリー合計(kcal / 日)</h2>
         <div id="chart-kcal" class="chart-box"></div>
+      </div>
+      <div class="card chart-card" id="kcal-food-card" hidden>
+        <h2 class="chart-title"><span class="swatch swatch-food"></span>ごはんのカロリー(kcal / 日)</h2>
+        <div id="chart-kcal-food" class="chart-box"></div>
+      </div>
+      <div class="card chart-card" id="kcal-snack-card" hidden>
+        <h2 class="chart-title"><span class="swatch swatch-snack"></span>おやつのカロリー(kcal / 日)</h2>
+        <div id="chart-kcal-snack" class="chart-box"></div>
       </div>
       <div class="card chart-card" id="weight-card" hidden>
         <h2 class="chart-title"><span class="swatch swatch-weight"></span>体重(kg)</h2>
@@ -260,7 +269,7 @@
           <label>いつもの量 g
             <input type="number" id="food-amount" inputmode="decimal" min="0" step="0.1" placeholder="例: 25">
           </label>
-          <label>カロリー kcal/100g
+          <label>カロリー(100gあたり)
             <input type="number" id="food-kcal" inputmode="decimal" min="0" step="1" placeholder="例: 360">
           </label>
         </div>

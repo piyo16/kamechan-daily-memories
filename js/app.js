@@ -331,34 +331,47 @@
     var weeks = C.weeklyStatsForMonth(records, ym).filter(function (w) {
       return w.start <= todayKey;
     });
-    var kcalMap = C.dailyKcal(records, S.getSettings().foods);
+    var foods = S.getSettings().foods;
+    var kcalMap = C.dailyKcal(records, foods);
+    var kcalFoodMap = C.dailyKcal(records, foods, "food");
+    var kcalSnackMap = C.dailyKcal(records, foods, "snack");
     var s = {};
 
     if (state.chartMode === "day") {
       var days = C.daysOfMonth(records, ym).filter(function (d) {
         return d.day <= todayKey;
       });
+      var dayKcalSeries = function (map) {
+        return days.map(function (d) { return { day: d.day, value: Math.round(map[d.day] || 0) }; });
+      };
       s.food = days.map(function (d) { return { day: d.day, value: d.food }; });
       s.water = days.map(function (d) { return { day: d.day, value: d.water }; });
       s.snack = days.map(function (d) { return { day: d.day, value: d.snack }; });
-      s.kcal = days.map(function (d) { return { day: d.day, value: Math.round(kcalMap[d.day] || 0) }; });
+      s.kcal = dayKcalSeries(kcalMap);
+      s.kcalFood = dayKcalSeries(kcalFoodMap);
+      s.kcalSnack = dayKcalSeries(kcalSnackMap);
       s.weight = C.weightSeries(records).filter(function (p) { return p.day.slice(0, 7) === ym; });
       s.temp = C.tempSeries(records).filter(function (p) { return p.day.slice(0, 7) === ym; });
     } else {
+      // カロリーの週平均(記録がある日だけで平均)
+      var weekKcalSeries = function (map) {
+        return weeks.map(function (w) {
+          var start = new Date(w.start + "T00:00:00");
+          var sum = 0, days = 0;
+          for (var i = 0; i < 7; i++) {
+            var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+            var v = map[C.dayKey(d)] || 0;
+            if (v > 0) { sum += v; days++; }
+          }
+          return { day: w.start, value: days ? Math.round(sum / days) : 0 };
+        });
+      };
       s.food = weeks.map(function (w) { return { day: w.start, value: w.food }; });
       s.water = weeks.map(function (w) { return { day: w.start, value: w.water }; });
       s.snack = weeks.map(function (w) { return { day: w.start, value: w.snack }; });
-      // カロリーの週平均(記録がある日だけで平均)
-      s.kcal = weeks.map(function (w) {
-        var start = new Date(w.start + "T00:00:00");
-        var sum = 0, days = 0;
-        for (var i = 0; i < 7; i++) {
-          var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-          var v = kcalMap[C.dayKey(d)] || 0;
-          if (v > 0) { sum += v; days++; }
-        }
-        return { day: w.start, value: days ? Math.round(sum / days) : 0 };
-      });
+      s.kcal = weekKcalSeries(kcalMap);
+      s.kcalFood = weekKcalSeries(kcalFoodMap);
+      s.kcalSnack = weekKcalSeries(kcalSnackMap);
       s.weight = weeks.filter(function (w) { return w.weight > 0; })
         .map(function (w) { return { day: w.start, value: w.weight }; });
       s.temp = weeks.filter(function (w) { return w.temp > 0; })
@@ -366,44 +379,41 @@
     }
 
     var perDay = state.chartMode === "day" ? " / 日" : " / 日の週平均";
-    KameChart.renderTrend($("chart-food"), {
-      data: s.food, unit: "g", color: "--series-food", title: "ごはん" + perDay,
+    var hasValue = function (series) {
+      return series.some(function (d) { return d.value > 0; });
+    };
+
+    // 各グラフの定義。has=false のものはトグルにも出さない
+    var chartDefs = [
+      { key: "food", card: "food-card", box: "chart-food", label: "ごはん", swatch: "--series-food",
+        has: true, opts: { data: s.food, unit: "g", color: "--series-food", title: "ごはん" + perDay } },
+      { key: "water", card: "water-card", box: "chart-water", label: "水", swatch: "--series-water",
+        has: true, opts: { data: s.water, unit: "ml", color: "--series-water", title: "水" + perDay } },
+      { key: "snack", card: "snack-card", box: "chart-snack", label: "おやつ", swatch: "--series-snack",
+        has: hasValue(s.snack), opts: { data: s.snack, unit: "g", color: "--series-snack", title: "おやつ" + perDay } },
+      { key: "kcal", card: "kcal-card", box: "chart-kcal", label: "合計kcal", swatch: "--series-kcal",
+        has: hasValue(s.kcal), opts: { data: s.kcal, unit: "kcal", color: "--series-kcal", title: "カロリー合計" + perDay } },
+      { key: "kcalFood", card: "kcal-food-card", box: "chart-kcal-food", label: "ごはんkcal", swatch: "--series-food",
+        has: hasValue(s.kcalFood), opts: { data: s.kcalFood, unit: "kcal", color: "--series-food", title: "ごはんのカロリー" + perDay } },
+      { key: "kcalSnack", card: "kcal-snack-card", box: "chart-kcal-snack", label: "おやつkcal", swatch: "--series-snack",
+        has: hasValue(s.kcalSnack), opts: { data: s.kcalSnack, unit: "kcal", color: "--series-snack", title: "おやつのカロリー" + perDay } },
+      { key: "weight", card: "weight-card", box: "chart-weight", label: "体重", swatch: "--series-weight",
+        has: s.weight.length > 0,
+        opts: { data: s.weight, unit: "kg", color: "--series-weight", title: "体重の推移",
+          zeroBase: false /* 0起点だと数百gの増減が見えないため */ } },
+      { key: "temp", card: "temp-card", box: "chart-temp", label: "体温", swatch: "--series-temp",
+        has: s.temp.length > 0,
+        opts: { data: s.temp, unit: "℃", color: "--series-temp", title: "体温の推移",
+          zeroBase: false /* 平熱まわりの小さな変化を見るため */ } },
+    ];
+
+    var chartHidden = S.getSettings().chartHidden || {};
+    chartDefs.forEach(function (c) {
+      var visible = c.has && !chartHidden[c.key];
+      $(c.card).hidden = !visible;
+      if (visible) KameChart.renderTrend($(c.box), c.opts);
     });
-    KameChart.renderTrend($("chart-water"), {
-      data: s.water, unit: "ml", color: "--series-water", title: "水" + perDay,
-    });
-
-    var hasSnack = s.snack.some(function (d) { return d.value > 0; });
-    $("snack-card").hidden = !hasSnack;
-    if (hasSnack) {
-      KameChart.renderTrend($("chart-snack"), {
-        data: s.snack, unit: "g", color: "--series-snack", title: "おやつ" + perDay,
-      });
-    }
-
-    var hasKcal = s.kcal.some(function (d) { return d.value > 0; });
-    $("kcal-card").hidden = !hasKcal;
-    if (hasKcal) {
-      KameChart.renderTrend($("chart-kcal"), {
-        data: s.kcal, unit: "kcal", color: "--series-kcal", title: "カロリー" + perDay,
-      });
-    }
-
-    $("weight-card").hidden = s.weight.length === 0;
-    if (s.weight.length > 0) {
-      KameChart.renderTrend($("chart-weight"), {
-        data: s.weight, unit: "kg", color: "--series-weight", title: "体重の推移",
-        zeroBase: false, // 0起点だと数百gの増減が見えないため
-      });
-    }
-
-    $("temp-card").hidden = s.temp.length === 0;
-    if (s.temp.length > 0) {
-      KameChart.renderTrend($("chart-temp"), {
-        data: s.temp, unit: "℃", color: "--series-temp", title: "体温の推移",
-        zeroBase: false, // 平熱まわりの小さな変化を見るため
-      });
-    }
+    renderChartToggles(chartDefs, chartHidden);
 
     var tbody = $("week-table-body");
     tbody.innerHTML = "";
@@ -416,6 +426,33 @@
         "<td>" + (w.days ? w.water + " ml" : "—") + "</td>" +
         "<td>" + w.days + "日</td>";
       tbody.appendChild(tr);
+    });
+  }
+
+  // データがあるグラフのON/OFFトグル(ピル)を描く
+  function renderChartToggles(chartDefs, chartHidden) {
+    var box = $("chart-toggle");
+    box.innerHTML = "";
+    chartDefs.forEach(function (c) {
+      if (!c.has) return;
+      var on = !chartHidden[c.key];
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chart-toggle-btn" + (on ? " is-on" : "");
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      var sw = document.createElement("span");
+      sw.className = "swatch";
+      sw.style.background = "var(" + c.swatch + ")";
+      btn.appendChild(sw);
+      btn.appendChild(document.createTextNode(c.label));
+      btn.addEventListener("click", function () {
+        var st = S.getSettings();
+        st.chartHidden = st.chartHidden || {};
+        st.chartHidden[c.key] = !st.chartHidden[c.key];
+        S.setSettings(st);
+        render();
+      });
+      box.appendChild(btn);
     });
   }
 
@@ -727,6 +764,15 @@
     if (isFood) attachFoodSuggest(row.querySelector(".in-name"), row);
 
     item.appendChild(row);
+
+    // 登録フードなら、このお皿ぶんのカロリーを下に表示する
+    if (isFood) {
+      var kcalNote = document.createElement("div");
+      kcalNote.className = "bowl-kcal";
+      kcalNote.hidden = true;
+      item.appendChild(kcalNote);
+    }
+
     $("bowl-rows").appendChild(item);
   }
 
@@ -750,6 +796,28 @@
       return C.consumed(v.given, v.left);
     }).filter(function (v, i) { return rowValues(items[i]).given !== ""; });
 
+    // お皿ごとのカロリー(登録フードのみ)を更新しつつ合計する
+    var foods = S.getSettings().foods;
+    var totalKcal = 0;
+    var hasKcal = false;
+    items.forEach(function (item) {
+      var note = item.querySelector(".bowl-kcal");
+      if (!note) return;
+      var v = rowValues(item);
+      var def = foods.find(function (f) {
+        return f.name === v.label && Number(f.kcal100) > 0;
+      });
+      if (def && v.given !== "") {
+        var kc = Math.round(C.consumed(v.given, v.left) * def.kcal100 / 100);
+        note.textContent = "約 " + kc + " kcal";
+        note.hidden = false;
+        totalKcal += kc;
+        hasKcal = true;
+      } else {
+        note.hidden = true;
+      }
+    });
+
     var p = $("consumed-preview");
     if (amounts.length === 0) {
       p.hidden = true;
@@ -758,7 +826,8 @@
     var total = Math.round(amounts.reduce(function (a, b) { return a + b; }, 0) * 10) / 10;
     p.hidden = false;
     p.textContent = "今日の" + C.TYPES[state.type].label + " 合計 " + total + " " + unit +
-      (amounts.length > 1 ? "(" + amounts.join(" + ") + ")" : "");
+      (amounts.length > 1 ? "(" + amounts.join(" + ") + ")" : "") +
+      (hasKcal ? " · 約 " + totalKcal + " kcal" : "");
   }
 
   function bindForm() {

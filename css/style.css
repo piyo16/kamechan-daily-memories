@@ -316,6 +316,31 @@ input[type="datetime-local"] {
   font-weight: 700;
 }
 
+/* グラフの表示/非表示トグル */
+.chart-toggle { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 2px; }
+
+.chart-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.chart-toggle-btn.is-on {
+  color: var(--text-primary);
+  border-color: var(--baseline);
+  background: var(--surface-1);
+}
+
+.chart-toggle-btn:not(.is-on) .swatch { opacity: 0.35; }
+
 .chart-card { padding: 12px 8px 6px; }
 
 .chart-title {
@@ -378,6 +403,14 @@ input[type="datetime-local"] {
   border-left: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
   padding-left: 8px;
   border-radius: 3px;
+}
+
+.bowl-kcal {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: right;
+  margin: -2px 26px 6px 2px;
+  font-variant-numeric: tabular-nums;
 }
 
 .bowl-row-meta {

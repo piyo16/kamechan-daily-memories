@@ -223,8 +223,9 @@
    * 日別カロリー: { "YYYY-MM-DD": kcal }
    * フード登録(foodDefs: [{name, amount, kcal100}])の kcal100(100gあたりのカロリー)と
    * ごはん・おやつ記録の摂取量から計算する。カロリー未登録のフードは含めない。
+   * type に "food" / "snack" を渡すとその種類だけ、省略すると合算。
    */
-  function dailyKcal(records, foodDefs) {
+  function dailyKcal(records, foodDefs, type) {
     var per100 = {};
     (foodDefs || []).forEach(function (f) {
       if (f && f.name && Number(f.kcal100) > 0) per100[f.name] = Number(f.kcal100);
@@ -232,6 +233,7 @@
     var out = {};
     liveRecords(records).forEach(function (r) {
       if (r.type !== "food" && r.type !== "snack") return;
+      if (type && r.type !== type) return;
       var k100 = per100[r.label];
       if (!k100) return;
       var k = dayKey(r.ts);
