@@ -1,5 +1,5 @@
 /* sw.js — オフラインでも開けるようにアプリ本体をキャッシュする */
-var CACHE = "kame-v3";
+var CACHE = "kame-v4";
 var ASSETS = [
   ".",
   "index.html",

@@ -303,7 +303,9 @@
   }
 
   function listable(records) {
-    return records.filter(function (r) { return r.type !== "profile"; });
+    return records.filter(function (r) {
+      return r.type !== "profile" && r.type !== "fooddefs";
+    });
   }
 
   function renderToday(records) {
@@ -319,7 +321,7 @@
     $("toilet-poop-count").textContent = toilet.poop;
 
     // 今日のカロリー(カロリー登録があるフードの分だけ)
-    var kcal = C.dailyKcal(records, S.getSettings().foods)[todayKey] || 0;
+    var kcal = C.dailyKcal(records, S.getFoods())[todayKey] || 0;
     $("kcal-tile").hidden = kcal <= 0;
     $("today-kcal").textContent = Math.round(kcal);
 
@@ -342,7 +344,7 @@
     var weeks = C.weeklyStatsForMonth(records, ym).filter(function (w) {
       return w.start <= todayKey;
     });
-    var foods = S.getSettings().foods;
+    var foods = S.getFoods();
     var kcalMap = C.dailyKcal(records, foods);
     var kcalFoodMap = C.dailyKcal(records, foods, "food");
     var kcalSnackMap = C.dailyKcal(records, foods, "snack");
@@ -609,12 +611,13 @@
     $("setting-gas-token").value = s.gasToken || "";
     $("record-count").textContent = C.liveRecords(S.getRecords()).length;
 
+    var foods = S.getFoods();
     var ul = $("food-defs");
     ul.innerHTML = "";
-    if (s.foods.length === 0) {
+    if (foods.length === 0) {
       ul.innerHTML = '<p class="empty-note">まだ登録がありません</p>';
     }
-    s.foods.forEach(function (f, idx) {
+    foods.forEach(function (f, idx) {
       var li = document.createElement("li");
       li.className = "food-def-item";
       var info = [];
@@ -627,8 +630,8 @@
       del.className = "delete-btn";
       del.textContent = "✕";
       del.addEventListener("click", function () {
-        s.foods.splice(idx, 1);
-        S.setSettings(s);
+        foods.splice(idx, 1);
+        S.setFoods(foods);
         renderSettings();
       });
       li.appendChild(del);
@@ -646,7 +649,7 @@
 
     function refresh() {
       var q = nameInput.value.trim();
-      var hits = S.getSettings().foods.filter(function (f) {
+      var hits = S.getFoods().filter(function (f) {
         return !q || f.name.indexOf(q) >= 0;
       });
       panel.innerHTML = "";
@@ -765,7 +768,7 @@
 
     // 登録済みフードを選んだら「いつもの量」を自動入力
     row.querySelector(".in-name").addEventListener("input", function (e) {
-      var def = S.getSettings().foods.find(function (f) { return f.name === e.target.value; });
+      var def = S.getFoods().find(function (f) { return f.name === e.target.value; });
       var givenInput = row.querySelector(".in-given");
       if (def && def.amount && !givenInput.value) {
         givenInput.value = def.amount;
@@ -811,7 +814,7 @@
     }).filter(function (v, i) { return rowValues(items[i]).given !== ""; });
 
     // お皿ごとのカロリー(登録フードのみ)を更新しつつ合計する
-    var foods = S.getSettings().foods;
+    var foods = S.getFoods();
     var totalKcal = 0;
     var hasKcal = false;
     items.forEach(function (item) {
@@ -1051,14 +1054,13 @@
     $("food-add").addEventListener("click", function () {
       var name = $("food-name").value.trim();
       if (!name) return;
-      var s = S.getSettings();
-      s.foods = s.foods.filter(function (f) { return f.name !== name; });
-      s.foods.push({
+      var foods = S.getFoods().filter(function (f) { return f.name !== name; });
+      foods.push({
         name: name,
         amount: Number($("food-amount").value) || 0,
         kcal100: Number($("food-kcal").value) || 0,
       });
-      S.setSettings(s);
+      S.setFoods(foods);
       $("food-name").value = "";
       $("food-amount").value = "";
       $("food-kcal").value = "";
@@ -1217,6 +1219,7 @@
     $("ts").value = nowLocalForInput();
     $("by").value = S.getSettings().by || "";
 
+    S.migrateFoodDefs();
     applyAppearance();
     bindKeyboardWatch();
     bindForm();
