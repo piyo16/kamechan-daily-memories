@@ -202,7 +202,18 @@
 
   // ---- 描画 ----
 
+  // ヘッダーのタイトル: プロフィールの名前+ちゃん日記(未設定ならペット日記)
+  function updateAppTitle() {
+    var name = (S.getProfile().name || "").trim();
+    // すでに「〜ちゃん」「〜くん」「〜さん」で終わる名前には付け足さない
+    var honorific = /(ちゃん|くん|さん)$/.test(name) ? "" : "ちゃん";
+    var title = name ? name + honorific + "日記" : "ペット日記";
+    $("app-title").textContent = "🐱 " + title;
+    document.title = title;
+  }
+
   function render() {
+    updateAppTitle();
     var records = C.liveRecords(S.getRecords());
     if (state.tab === "record") renderToday(records);
     if (state.tab === "charts") renderCharts(records);
