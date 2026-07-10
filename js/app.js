@@ -556,7 +556,10 @@
     // 編集フォーム
     $("p-name").value = p.name || "";
     $("p-sex").value = p.sex || "";
-    $("p-birth").value = p.birth || "";
+    // 旧データは"YYYY-MM"形式なので、日付inputに入るよう1日として補完する
+    var birth = p.birth || "";
+    if (/^\d{4}-\d{2}$/.test(birth)) birth += "-01";
+    $("p-birth").value = birth;
     $("p-breed").value = p.breed || "";
     $("p-diseases").value = p.diseases || "";
   }

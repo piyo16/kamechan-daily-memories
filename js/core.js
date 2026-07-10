@@ -361,13 +361,15 @@
     return out;
   }
 
-  // 生年月("YYYY-MM")から「X歳Yか月」を作る
+  // 誕生日("YYYY-MM-DD"。旧データの"YYYY-MM"も可)から「X歳Yか月」を作る
   function ageLabel(birth, today) {
     if (!birth) return "";
-    var m = /^(\d{4})-(\d{2})/.exec(birth);
+    var m = /^(\d{4})-(\d{2})(?:-(\d{2}))?/.exec(birth);
     if (!m) return "";
     var base = today ? new Date(today) : new Date();
     var months = (base.getFullYear() - Number(m[1])) * 12 + (base.getMonth() + 1 - Number(m[2]));
+    // 日にちまで分かっていて、今月の誕生日がまだ来ていなければ1か月引く
+    if (m[3] && base.getDate() < Number(m[3])) months--;
     if (months < 0) return "";
     return Math.floor(months / 12) + "歳" + (months % 12) + "か月";
   }

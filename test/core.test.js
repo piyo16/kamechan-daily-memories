@@ -118,6 +118,11 @@ assert.strictEqual(checks[0].level, "info");
 // ageLabel
 assert.strictEqual(C.ageLabel("2020-03", new Date(2026, 6, 5)), "6歳4か月");
 assert.strictEqual(C.ageLabel("", new Date()), "");
+// 日にちまで指定: 今月の誕生日前なら1か月少ない
+assert.strictEqual(C.ageLabel("2020-03-10", new Date(2026, 6, 5)), "6歳3か月");
+assert.strictEqual(C.ageLabel("2020-03-10", new Date(2026, 6, 10)), "6歳4か月");
+assert.strictEqual(C.ageLabel("2020-07-06", new Date(2026, 6, 5)), "5歳11か月");
+assert.strictEqual(C.ageLabel("2020-07-06", new Date(2026, 6, 6)), "6歳0か月");
 
 // buildConsultText: プロフィールと記録が入る
 const consult = C.buildConsultText(
