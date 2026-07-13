@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#fcfcfb" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#1a1a19" media="(prefers-color-scheme: dark)">
-  <title>かめちゃん日記</title>
+  <title>ペット日記</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -13,7 +13,7 @@
 </head>
 <body>
   <header class="app-header">
-    <h1>🐱 かめちゃん日記</h1>
+    <h1 id="app-title">🐱 ペット日記</h1>
     <span id="sync-badge" class="sync-badge" hidden></span>
   </header>
 
@@ -129,12 +129,13 @@
         <button type="button" class="range-btn is-active" data-mode="week">週ごと</button>
         <button type="button" class="range-btn" data-mode="day">日ごと</button>
       </div>
+      <div class="chart-toggle" id="chart-toggle" aria-label="表示するグラフ"></div>
 
-      <div class="card chart-card">
+      <div class="card chart-card" id="food-card">
         <h2 class="chart-title"><span class="swatch swatch-food"></span>ごはん(g / 日)</h2>
         <div id="chart-food" class="chart-box"></div>
       </div>
-      <div class="card chart-card">
+      <div class="card chart-card" id="water-card">
         <h2 class="chart-title"><span class="swatch swatch-water"></span>水(ml / 日)</h2>
         <div id="chart-water" class="chart-box"></div>
       </div>
@@ -143,8 +144,16 @@
         <div id="chart-snack" class="chart-box"></div>
       </div>
       <div class="card chart-card" id="kcal-card" hidden>
-        <h2 class="chart-title"><span class="swatch swatch-kcal"></span>カロリー(kcal / 日)</h2>
+        <h2 class="chart-title"><span class="swatch swatch-kcal"></span>カロリー合計(kcal / 日)</h2>
         <div id="chart-kcal" class="chart-box"></div>
+      </div>
+      <div class="card chart-card" id="kcal-food-card" hidden>
+        <h2 class="chart-title"><span class="swatch swatch-food"></span>ごはんのカロリー(kcal / 日)</h2>
+        <div id="chart-kcal-food" class="chart-box"></div>
+      </div>
+      <div class="card chart-card" id="kcal-snack-card" hidden>
+        <h2 class="chart-title"><span class="swatch swatch-snack"></span>おやつのカロリー(kcal / 日)</h2>
+        <div id="chart-kcal-snack" class="chart-box"></div>
       </div>
       <div class="card chart-card" id="weight-card" hidden>
         <h2 class="chart-title"><span class="swatch swatch-weight"></span>体重(kg)</h2>
@@ -235,8 +244,8 @@
               <option>メス</option>
             </select>
           </label>
-          <label>生まれた年月
-            <input type="month" id="p-birth">
+          <label>誕生日
+            <input type="date" id="p-birth">
           </label>
         </div>
         <label>猫種
@@ -275,7 +284,7 @@
           <label>いつもの量 g
             <input type="number" id="food-amount" inputmode="decimal" min="0" step="0.1" placeholder="例: 25">
           </label>
-          <label>カロリー kcal/100g
+          <label>カロリー(100gあたり)
             <input type="number" id="food-kcal" inputmode="decimal" min="0" step="1" placeholder="例: 360">
           </label>
         </div>

@@ -116,6 +116,38 @@
       });
     },
 
+    // フード登録も id 固定の特別なレコードとして保存・同期する(家族と共有できる)
+    getFoods: function () {
+      var rec = Storage.getRecords().find(function (r) { return r.id === "food-defs"; });
+      if (rec && !rec.deleted && rec.note) {
+        try {
+          var arr = JSON.parse(rec.note);
+          if (Array.isArray(arr)) return arr;
+        } catch (e) {}
+      }
+      // 旧バージョンは設定(端末内)に保存していたので、レコードがなければそちらを見る
+      var s = Storage.getSettings();
+      return Array.isArray(s.foods) ? s.foods : [];
+    },
+
+    setFoods: function (foods) {
+      Storage.upsert({
+        id: "food-defs",
+        ts: "2000-01-01T00:00:00.000Z", // 集計対象外・一覧に出さない
+        type: "fooddefs",
+        note: JSON.stringify(foods || []),
+      });
+    },
+
+    // 旧バージョンが設定に保存していたフード登録を、共有できるレコードへ一度だけ移す
+    migrateFoodDefs: function () {
+      var hasRec = Storage.getRecords().some(function (r) { return r.id === "food-defs"; });
+      var legacy = Storage.getSettings().foods;
+      if (!hasRec && Array.isArray(legacy) && legacy.length > 0) {
+        Storage.setFoods(legacy);
+      }
+    },
+
     // 追加・更新・削除はすべて「レコードを upsert」して outbox に積む
     upsert: function (record, skipSync) {
       record.updatedAt = new Date().toISOString();

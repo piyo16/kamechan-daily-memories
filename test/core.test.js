@@ -127,6 +127,11 @@ assert.strictEqual(checks[0].level, "info");
 // ageLabel
 assert.strictEqual(C.ageLabel("2020-03", new Date(2026, 6, 5)), "6歳4か月");
 assert.strictEqual(C.ageLabel("", new Date()), "");
+// 日にちまで指定: 今月の誕生日前なら1か月少ない
+assert.strictEqual(C.ageLabel("2020-03-10", new Date(2026, 6, 5)), "6歳3か月");
+assert.strictEqual(C.ageLabel("2020-03-10", new Date(2026, 6, 10)), "6歳4か月");
+assert.strictEqual(C.ageLabel("2020-07-06", new Date(2026, 6, 5)), "5歳11か月");
+assert.strictEqual(C.ageLabel("2020-07-06", new Date(2026, 6, 6)), "6歳0か月");
 
 // buildConsultText: プロフィールと記録が入る
 const consult = C.buildConsultText(
@@ -216,5 +221,8 @@ assert.strictEqual(kcal["2026-07-05"], 187); // 50g*3.6 + 14g*0.5 = 180+7
 assert.strictEqual(kcal["2026-07-04"], 90);  // 25g*3.6
 assert.strictEqual(kcal["2026-07-03"], undefined); // 削除済みは除外
 assert.deepStrictEqual(C.dailyKcal(kcalRecs, []), {}); // 登録なしなら空
+// 種類別フィルタ
+assert.strictEqual(C.dailyKcal(kcalRecs, kcalDefs, "food")["2026-07-05"], 180);
+assert.strictEqual(C.dailyKcal(kcalRecs, kcalDefs, "snack")["2026-07-05"], 7);
 
 console.log("all tests passed ✔");
