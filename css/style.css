@@ -821,17 +821,29 @@ body[data-theme="yozora"] {
   background: rgba(0, 0, 0, 0.88);
 }
 
-.lightbox-body { display: flex; align-items: center; gap: 6px; max-width: 100%; }
+/* 写真は幅100%の箱の中で中央寄せ、めくりボタンは左右端に絶対配置。
+   (中身の幅で箱を作る方式だと、iOS Safariで写真の読み込み時に
+   幅計算がずれて右寄りになることがあった) */
+.lightbox-body {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .lightbox-body img {
-  /* 左右の めくりボタン(36px×2)+すき間+.lightboxのpadding が収まる幅 */
-  max-width: calc(100vw - 124px);
+  /* 左右の めくりボタン(36px×2)+すき間ぶんを空ける */
+  max-width: calc(100% - 96px);
   max-height: 70vh;
   border-radius: 12px;
 }
 
 .lightbox-nav {
-  flex: 0 0 36px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
   padding: 12px 0;
   border: none;
   border-radius: 10px;
@@ -839,6 +851,9 @@ body[data-theme="yozora"] {
   color: #fff;
   font-size: 1rem;
 }
+
+#lightbox-prev { left: 0; }
+#lightbox-next { right: 0; }
 
 .lightbox-nav:disabled { opacity: 0.3; }
 
