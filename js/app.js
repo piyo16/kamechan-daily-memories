@@ -184,11 +184,20 @@
 
     if (window.visualViewport) {
       var vv = window.visualViewport;
-      var maxHeight = vv.height;
+      var baseHeight = vv.height; // キーボードが出ていないときの基準の高さ
       var restoreTimer = null;
       vv.addEventListener("resize", function () {
-        maxHeight = Math.max(maxHeight, vv.height);
-        viewportHide = maxHeight - vv.height > 150;
+        if (!isTextField(document.activeElement)) {
+          // テキスト入力中でなければキーボードの縮みではない
+          // (ウィンドウの縮小・ピンチズーム等)。ここで基準を取り直さないと、
+          // 縮めた画面でタブバーが消えたままになる
+          baseHeight = vv.height;
+          viewportHide = false;
+          apply();
+          return;
+        }
+        baseHeight = Math.max(baseHeight, vv.height);
+        viewportHide = baseHeight - vv.height > 150;
         clearTimeout(restoreTimer);
         if (!viewportHide) {
           // ビューポートが元の高さに戻った=キーボードは閉じている。
@@ -204,7 +213,7 @@
       });
       // 画面回転で基準の高さが変わるためリセット
       window.addEventListener("orientationchange", function () {
-        maxHeight = 0;
+        baseHeight = 0;
         viewportHide = false;
         apply();
       });
