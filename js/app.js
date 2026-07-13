@@ -10,6 +10,7 @@
   var state = {
     tab: "record",
     type: "food",
+    recordDate: "", // きろくタブで表示中の日付 "YYYY-MM-DD"("" = きょう)
     chartMonth: new Date().toISOString().slice(0, 7), // グラフ表示中の月 "YYYY-MM"
     chartMode: "week", // "week" | "day"
     historyDate: "", // りれきの日付フィルタ("" = 全部)
@@ -56,8 +57,24 @@
 
   // ---- ユーティリティ ----
 
+  // きろくタブで表示中の日付キー("" = きょう)
+  function recordDayKey() {
+    return state.recordDate || C.dayKey(new Date());
+  }
+
+  // 表示中の日の「今の時刻」。前の日を見ているときはその日付+今の時刻で記録する
+  function nowOnRecordDate() {
+    var now = new Date();
+    var key = recordDayKey();
+    if (key === C.dayKey(now)) return now;
+    var p = key.split("-");
+    return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]),
+      now.getHours(), now.getMinutes(), now.getSeconds());
+  }
+
+  // datetime-local 入力用の "YYYY-MM-DDTHH:MM"(表示中の日に合わせる)
   function nowLocalForInput() {
-    var d = new Date();
+    var d = nowOnRecordDate();
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().slice(0, 16);
   }
@@ -296,19 +313,29 @@
   }
 
   function renderToday(records) {
-    var todayKey = C.dayKey(new Date());
-    var todays = listable(records).filter(function (r) { return C.dayKey(r.ts) === todayKey; });
+    var key = recordDayKey();
+    var isToday = key === C.dayKey(new Date());
 
-    var totals = C.dailyTotals(todays)[todayKey] || { food: 0, water: 0, snack: 0 };
+    // 日付ナビと見出し(きょう以外を見ているときは文言を変える)
+    $("record-date-label").textContent = isToday ? "きょう" : dayLabel(key);
+    $("record-date").value = key;
+    $("day-next").disabled = isToday;
+    $("tile-food-label").textContent = isToday ? "今日のごはん" : "この日のごはん";
+    $("tile-water-label").textContent = isToday ? "今日の水" : "この日の水";
+    $("diary-card-title").textContent = isToday ? "📷 今日のかめ" : "📷 この日のかめ";
+
+    var todays = listable(records).filter(function (r) { return C.dayKey(r.ts) === key; });
+
+    var totals = C.dailyTotals(todays)[key] || { food: 0, water: 0, snack: 0 };
     $("today-food").textContent = totals.food;
     $("today-water").textContent = totals.water;
 
-    var toilet = C.dailyToiletCounts(records)[todayKey] || { pee: 0, poop: 0 };
+    var toilet = C.dailyToiletCounts(records)[key] || { pee: 0, poop: 0 };
     $("toilet-pee-count").textContent = toilet.pee;
     $("toilet-poop-count").textContent = toilet.poop;
 
-    // 今日のカロリー(カロリー登録があるフードの分だけ)
-    var kcal = C.dailyKcal(records, S.getSettings().foods)[todayKey] || 0;
+    // この日のカロリー(カロリー登録があるフードの分だけ)
+    var kcal = C.dailyKcal(records, S.getSettings().foods)[key] || 0;
     $("kcal-tile").hidden = kcal <= 0;
     $("today-kcal").textContent = Math.round(kcal);
 
@@ -730,12 +757,12 @@
     $("bowl-rows").appendChild(item);
   }
 
-  // 今日の保存済み記録(選択中の種類)を行として並べる
+  // 表示中の日の保存済み記録(選択中の種類)を行として並べる
   function rebuildBowlRows(records) {
     $("bowl-rows").innerHTML = "";
-    var todayKey = C.dayKey(new Date());
+    var key = recordDayKey();
     var saved = C.liveRecords(records || S.getRecords())
-      .filter(function (r) { return r.type === state.type && C.dayKey(r.ts) === todayKey; })
+      .filter(function (r) { return r.type === state.type && C.dayKey(r.ts) === key; })
       .sort(function (a, b) { return a.ts < b.ts ? -1 : 1; });
     saved.forEach(function (r) { addBowlRow(r); });
     if (saved.length === 0) addBowlRow();
@@ -756,8 +783,9 @@
       return;
     }
     var total = Math.round(amounts.reduce(function (a, b) { return a + b; }, 0) * 10) / 10;
+    var prefix = recordDayKey() === C.dayKey(new Date()) ? "今日の" : "この日の";
     p.hidden = false;
-    p.textContent = "今日の" + C.TYPES[state.type].label + " 合計 " + total + " " + unit +
+    p.textContent = prefix + C.TYPES[state.type].label + " 合計 " + total + " " + unit +
       (amounts.length > 1 ? "(" + amounts.join(" + ") + ")" : "");
   }
 
@@ -836,6 +864,40 @@
     });
   }
 
+  // ---- きろくの日付ナビ ----
+
+  function setRecordDate(key) {
+    if (isBowlAreaDirty() && !confirm("保存していない入力があります。日付を変えますか?")) {
+      $("record-date").value = recordDayKey(); // 表示を元に戻す
+      return;
+    }
+    var todayKey = C.dayKey(new Date());
+    if (!key || key >= todayKey) key = ""; // 未来の日は選べない(きょうに丸める)
+    state.recordDate = key;
+    $("ts").value = nowLocalForInput();
+    rebuildBowlRows();
+    render();
+  }
+
+  function bindRecordDate() {
+    $("day-prev").addEventListener("click", function () {
+      setRecordDate(C.shiftDay(recordDayKey(), -1));
+    });
+    $("day-next").addEventListener("click", function () {
+      setRecordDate(C.shiftDay(recordDayKey(), 1));
+    });
+    // 透明にした日付inputがタップを拾えない環境向けの保険(りれきと同じ)
+    $("record-date").parentElement.addEventListener("click", function (e) {
+      var input = $("record-date");
+      if (e.target !== input && input.showPicker) {
+        try { input.showPicker(); } catch (err) {}
+      }
+    });
+    $("record-date").addEventListener("change", function (e) {
+      setRecordDate(e.target.value);
+    });
+  }
+
   // ---- 今日のかめ(日記) ----
 
   function bindDiary() {
@@ -863,7 +925,7 @@
 
       var record = {
         id: C.uuid(),
-        ts: new Date().toISOString(),
+        ts: nowOnRecordDate().toISOString(), // 表示中の日の分として残す
         type: "diary",
         note: note,
         weight: weight,
@@ -1108,12 +1170,12 @@
       }
     });
 
-    // トイレ記録: ワンタップで1回ぶん記録
+    // トイレ記録: ワンタップで1回ぶん記録(表示中の日の分として)
     [["toilet-pee", "pee"], ["toilet-poop", "poop"]].forEach(function (pair) {
       $(pair[0]).addEventListener("click", function () {
         S.upsert({
           id: C.uuid(),
-          ts: new Date().toISOString(),
+          ts: nowOnRecordDate().toISOString(),
           type: "toilet",
           label: pair[1],
           amount: 1,
@@ -1137,6 +1199,7 @@
     applyAppearance();
     bindKeyboardWatch();
     bindForm();
+    bindRecordDate();
     bindDiary();
     bindMypage();
     bindSettings();

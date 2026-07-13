@@ -83,6 +83,8 @@ main { padding: 0 14px; max-width: 480px; margin: 0 auto; }
 /* --- 今日の合計タイル --- */
 .tiles { display: flex; gap: 10px; }
 
+.tile[hidden] { display: none; } /* display:flex が hidden 属性に勝たないように */
+
 .tile {
   flex: 1;
   background: var(--surface-1);
@@ -448,6 +450,10 @@ input[type="datetime-local"] {
 
 .month-nav input { flex: 1; margin-top: 0; text-align: center; }
 .month-nav .ghost-btn { flex: 0 0 44px; padding: 10px 0; }
+
+/* きろくの日付ナビ(◀ きょう ▶)。真ん中はりれきと同じ日付ピッカーボタン */
+.day-nav .date-pick-btn { flex: 1; margin-top: 0; }
+.day-nav .ghost-btn:disabled { opacity: 0.35; }
 
 /* --- トイレ記録 --- */
 .toilet-row { display: flex; gap: 10px; }

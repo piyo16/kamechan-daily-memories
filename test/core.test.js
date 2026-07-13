@@ -12,6 +12,15 @@ assert.strictEqual(C.consumed("30.5", "0.2"), 30.3); // 小数と文字列入力
 assert.strictEqual(C.dayKey(new Date(2026, 6, 5, 23, 59)), "2026-07-05");
 assert.strictEqual(C.dayKey(new Date(2026, 0, 1, 0, 0)), "2026-01-01");
 
+// shiftDay: 日付キーを日単位でずらす(月・年またぎ)
+assert.strictEqual(C.shiftDay("2026-07-13", -1), "2026-07-12");
+assert.strictEqual(C.shiftDay("2026-07-01", -1), "2026-06-30");
+assert.strictEqual(C.shiftDay("2026-01-01", -1), "2025-12-31");
+assert.strictEqual(C.shiftDay("2026-02-28", 1), "2026-03-01");
+assert.strictEqual(C.shiftDay("2026-07-12", 1), "2026-07-13");
+assert.strictEqual(C.shiftDay("2026-07-12", 0), "2026-07-12");
+assert.strictEqual(C.shiftDay("bad", 1), "bad"); // 不正な形式はそのまま返す
+
 // mergeRecords: 同一idは updatedAt が新しい方が勝つ
 const older = { id: "a", ts: "2026-07-01T10:00:00Z", type: "food", amount: 10, updatedAt: "2026-07-01T10:00:00Z" };
 const newer = { id: "a", ts: "2026-07-01T10:00:00Z", type: "food", amount: 20, updatedAt: "2026-07-02T10:00:00Z" };

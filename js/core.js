@@ -50,6 +50,14 @@
     return d.getFullYear() + "-" + (m < 10 ? "0" + m : m) + "-" + (day < 10 ? "0" + day : day);
   }
 
+  // "YYYY-MM-DD" を delta 日ずらした日付キーを返す(月・年またぎもOK)
+  function shiftDay(key, delta) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+    if (!m) return key;
+    var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + delta);
+    return dayKey(d);
+  }
+
   // 同一idは updatedAt が新しい方を採用してマージ(削除トゥームストーンも保持)
   function mergeRecords(a, b) {
     var byId = {};
@@ -416,6 +424,7 @@
     uuid: uuid,
     consumed: consumed,
     dayKey: dayKey,
+    shiftDay: shiftDay,
     mergeRecords: mergeRecords,
     liveRecords: liveRecords,
     dailyTotals: dailyTotals,
