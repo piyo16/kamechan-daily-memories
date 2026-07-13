@@ -120,7 +120,7 @@
 
     <!-- グラフ -->
     <section id="tab-charts" class="tab" hidden>
-      <div class="month-nav">
+      <div class="month-nav" id="chart-month-nav">
         <button type="button" id="month-prev" class="ghost-btn" aria-label="前の月">◀</button>
         <input type="month" id="chart-month">
         <button type="button" id="month-next" class="ghost-btn" aria-label="次の月">▶</button>
@@ -128,6 +128,15 @@
       <div class="range-toggle" role="radiogroup" aria-label="表示単位">
         <button type="button" class="range-btn is-active" data-mode="week">週ごと</button>
         <button type="button" class="range-btn" data-mode="day">日ごと</button>
+        <button type="button" class="range-btn" data-mode="range">期間をえらぶ</button>
+      </div>
+      <div class="field-row range-inputs" id="range-inputs" hidden>
+        <label>はじまり
+          <input type="date" id="range-from">
+        </label>
+        <label>おわり
+          <input type="date" id="range-to">
+        </label>
       </div>
       <div class="chart-toggle" id="chart-toggle" aria-label="表示するグラフ"></div>
 
@@ -164,7 +173,7 @@
         <div id="chart-temp" class="chart-box"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="week-avg-card">
         <h2 class="card-title">この月の週ごとの平均(1日あたり)</h2>
         <table class="week-table">
           <thead>
@@ -179,6 +188,10 @@
 
     <!-- りれき -->
     <section id="tab-history" class="tab" hidden>
+      <div class="range-toggle" role="radiogroup" aria-label="表示のしかた">
+        <button type="button" class="range-btn is-active" data-view="list">📖 きろく</button>
+        <button type="button" class="range-btn" data-view="album">🖼 アルバム</button>
+      </div>
       <div class="card history-filter">
         <label>日付をえらんで見る
           <span class="date-pick-btn">
@@ -194,13 +207,14 @@
         </label>
         <button type="button" id="history-clear" class="ghost-btn" hidden>すべて表示</button>
       </div>
-      <div class="select-bar">
+      <div class="select-bar" id="select-bar">
         <button type="button" id="select-mode" class="ghost-btn">☑️ えらんで削除</button>
         <button type="button" id="select-all" class="ghost-btn" hidden>すべて選択</button>
         <button type="button" id="select-delete" class="danger-btn" hidden>🗑 削除 (0)</button>
         <button type="button" id="select-cancel" class="ghost-btn" hidden>やめる</button>
       </div>
       <div id="history-list-box"></div>
+      <div id="album-box" class="album-grid" hidden></div>
     </section>
 
     <!-- マイページ -->
@@ -315,6 +329,17 @@
       </div>
     </section>
   </main>
+
+  <!-- アルバムの写真拡大表示 -->
+  <div id="lightbox" class="lightbox" hidden>
+    <button type="button" id="lightbox-close" class="lightbox-close" aria-label="閉じる">✕</button>
+    <div class="lightbox-body">
+      <button type="button" id="lightbox-prev" class="lightbox-nav" aria-label="前の写真">◀</button>
+      <img id="lightbox-img" alt="記録した写真">
+      <button type="button" id="lightbox-next" class="lightbox-nav" aria-label="次の写真">▶</button>
+    </div>
+    <p id="lightbox-caption" class="lightbox-caption"></p>
+  </div>
 
   <nav class="tab-bar">
     <button class="tab-btn is-active" data-tab="record">✏️<span>きろく</span></button>

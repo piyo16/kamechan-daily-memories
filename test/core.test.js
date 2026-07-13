@@ -171,6 +171,35 @@ assert.strictEqual(monthDays[30].food, 0);   // 7/31 記録なし
 assert.deepStrictEqual(C.daysOfMonth(recs, "2026-02").length, 28);
 assert.deepStrictEqual(C.daysOfMonth(recs, "bad"), []);
 
+// daysInRange: 任意の期間の日別合計(両端含む・0埋め・月またぎ)
+const range = C.daysInRange(recs, "2026-07-03", "2026-07-05");
+assert.strictEqual(range.length, 3);
+assert.deepStrictEqual(range.map((d) => d.day), ["2026-07-03", "2026-07-04", "2026-07-05"]);
+assert.strictEqual(range[0].food, 0);      // 記録なしの日は0
+assert.strictEqual(range[1].water, 80);    // 7/4
+assert.strictEqual(range[2].food, 55.5);   // 7/5
+assert.strictEqual(C.daysInRange(recs, "2026-06-29", "2026-07-02").length, 4); // 月またぎ
+assert.strictEqual(C.daysInRange(recs, "2026-07-05", "2026-07-05").length, 1); // 1日だけ
+assert.deepStrictEqual(C.daysInRange(recs, "2026-07-05", "2026-07-01"), []);   // 逆順は空
+assert.deepStrictEqual(C.daysInRange(recs, "bad", "2026-07-05"), []);          // 不正は空
+assert.ok(C.daysInRange(recs, "2020-01-01", "2030-01-01").length <= 731);      // 長すぎは打ち切り
+
+// photoEntries: 写真つき記録だけを新しい順で(削除・profileは除外)
+const photoRecs = [
+  { id: "ph1", ts: "2026-07-01T10:00:00", type: "diary", photoId: "p1", note: "ねてた", updatedAt: "1" },
+  { id: "ph2", ts: "2026-07-03T10:00:00", type: "diary", photoId: "p2", by: "しゅん", updatedAt: "1" },
+  { id: "ph3", ts: "2026-07-02T10:00:00", type: "diary", note: "写真なし", updatedAt: "1" },
+  { id: "ph4", ts: "2026-07-04T10:00:00", type: "diary", photoId: "p4", updatedAt: "1", deleted: true },
+  { id: "profile", ts: "2000-01-01T00:00:00", type: "profile", photoId: "av1", note: "{}", updatedAt: "1" },
+];
+const photos = C.photoEntries(photoRecs);
+assert.strictEqual(photos.length, 2);
+assert.strictEqual(photos[0].photoId, "p2"); // 新しい順
+assert.strictEqual(photos[0].day, "2026-07-03");
+assert.strictEqual(photos[0].by, "しゅん");
+assert.strictEqual(photos[1].photoId, "p1");
+assert.strictEqual(photos[1].note, "ねてた");
+
 // weeklyStatsForMonth: 月に重なる週ごとの平均(体重・体温も)
 const julyRecs = [
   { id: "j1", ts: "2026-07-01T08:00:00", type: "food", amount: 40, updatedAt: "1" },

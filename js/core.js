@@ -178,6 +178,32 @@
   }
 
   /*
+   * from〜to("YYYY-MM-DD"・両端を含む)の日別合計を欠損0埋めで返す。
+   * 形式が不正・from が to より後のときは空配列。長すぎる期間は2年で打ち切る。
+   */
+  function daysInRange(records, fromKey, toKey) {
+    var re = /^\d{4}-\d{2}-\d{2}$/;
+    if (!re.test(fromKey) || !re.test(toKey) || fromKey > toKey) return [];
+    var totals = dailyTotals(records);
+    var out = [];
+    for (var k = fromKey; k <= toKey && out.length < 731; k = shiftDay(k, 1)) {
+      var t = totals[k] || { food: 0, water: 0, snack: 0 };
+      out.push({ day: k, food: t.food, water: t.water, snack: t.snack });
+    }
+    return out;
+  }
+
+  // 写真つきの記録を新しい順で返す(アルバム用): [{ id, photoId, ts, day, note, by }]
+  function photoEntries(records) {
+    return liveRecords(records)
+      .filter(function (r) { return r.photoId && r.type !== "profile" && r.type !== "fooddefs"; })
+      .sort(function (a, b) { return String(a.ts) < String(b.ts) ? 1 : -1; })
+      .map(function (r) {
+        return { id: r.id, photoId: r.photoId, ts: r.ts, day: dayKey(r.ts), note: r.note || "", by: r.by || "" };
+      });
+  }
+
+  /*
    * "YYYY-MM" の月に重なる週(月曜はじまり)ごとの平均。
    * food/water/snack は記録がある日の平均、weight/temp はその週の記録値の平均。
    * [{ start, days, food, water, snack, weight, temp }]
@@ -438,6 +464,8 @@
     weightSeries: weightSeries,
     tempSeries: tempSeries,
     daysOfMonth: daysOfMonth,
+    daysInRange: daysInRange,
+    photoEntries: photoEntries,
     weeklyStatsForMonth: weeklyStatsForMonth,
     dailyKcal: dailyKcal,
     dailyToiletCounts: dailyToiletCounts,

@@ -12,8 +12,10 @@
     type: "food",
     recordDate: "", // きろくタブで表示中の日付 "YYYY-MM-DD"("" = きょう)
     chartMonth: new Date().toISOString().slice(0, 7), // グラフ表示中の月 "YYYY-MM"
-    chartMode: "week", // "week" | "day"
+    chartMode: "week", // "week" | "day" | "range"
+    chartFrom: "", chartTo: "", // 期間指定グラフの範囲 "YYYY-MM-DD"
     historyDate: "", // りれきの日付フィルタ("" = 全部)
+    historyView: "list", // "list"(きろく一覧) | "album"(写真)
     stagedPhoto: null, // 「今日のかめ」で選択中の写真dataURL
     selectMode: false, // りれきの複数選択モード
     selected: {}, // 選択中の記録id → true
@@ -93,6 +95,11 @@
     var div = document.createElement("div");
     div.textContent = s == null ? "" : String(s);
     return div.innerHTML;
+  }
+
+  // プロフィールに登録した名前(未登録なら「かめ」)
+  function petName() {
+    return (S.getProfile().name || "").trim() || "かめ";
   }
 
   // 画像を縮小してJPEGのdataURLにする(通信量・容量対策)
@@ -257,7 +264,7 @@
     } else if (r.type === "diary") {
       var meta = [timeLabel(r.ts), r.by].filter(Boolean).join(" · ");
       main.innerHTML =
-        "<div>" + (r.note ? escapeHtml(r.note) : "今日のかめ") +
+        "<div>" + (r.note ? escapeHtml(r.note) : "この日の" + escapeHtml(petName())) +
         (Number(r.weight) > 0 ? ' <span class="record-meta">体重 ' + r.weight + "kg</span>" : "") +
         (Number(r.temp) > 0 ? ' <span class="record-meta">体温 ' + r.temp + "℃</span>" : "") +
         "</div>" +
@@ -267,7 +274,7 @@
       if (r.photoId) {
         var img = document.createElement("img");
         img.className = "record-photo";
-        img.alt = "今日のかめの写真";
+        img.alt = petName() + "の写真";
         img.hidden = true;
         main.appendChild(img);
         loadPhotoInto(img, r.photoId);
@@ -335,7 +342,7 @@
     $("day-next").disabled = isToday;
     $("tile-food-label").textContent = isToday ? "今日のごはん" : "この日のごはん";
     $("tile-water-label").textContent = isToday ? "今日の水" : "この日の水";
-    $("diary-card-title").textContent = isToday ? "📷 今日のかめ" : "📷 この日のかめ";
+    $("diary-card-title").textContent = "📷 " + (isToday ? "今日の" : "この日の") + petName();
 
     var todays = listable(records).filter(function (r) { return C.dayKey(r.ts) === key; });
 
@@ -366,8 +373,17 @@
     var ym = state.chartMonth;
     $("chart-month").value = ym;
     var todayKey = C.dayKey(new Date());
+    var isRange = state.chartMode === "range";
+
+    // 期間指定のときは月ナビと週平均表のかわりに、はじまり・おわりの入力を出す
+    $("chart-month-nav").hidden = isRange;
+    $("range-inputs").hidden = !isRange;
+    $("week-avg-card").hidden = isRange;
+    $("range-from").value = state.chartFrom;
+    $("range-to").value = state.chartTo;
+
     // 未来の日・週は0として描かない
-    var weeks = C.weeklyStatsForMonth(records, ym).filter(function (w) {
+    var weeks = isRange ? [] : C.weeklyStatsForMonth(records, ym).filter(function (w) {
       return w.start <= todayKey;
     });
     var foods = S.getFoods();
@@ -376,10 +392,16 @@
     var kcalSnackMap = C.dailyKcal(records, foods, "snack");
     var s = {};
 
-    if (state.chartMode === "day") {
-      var days = C.daysOfMonth(records, ym).filter(function (d) {
-        return d.day <= todayKey;
-      });
+    if (state.chartMode !== "week") {
+      // 日ごと(その月)または期間指定(はじまり〜おわり)の日別折れ線
+      var days = (isRange
+        ? C.daysInRange(records, state.chartFrom, state.chartTo)
+        : C.daysOfMonth(records, ym)
+      ).filter(function (d) { return d.day <= todayKey; });
+      var inShown = function (p) {
+        if (isRange) return p.day >= state.chartFrom && p.day <= state.chartTo && p.day <= todayKey;
+        return p.day.slice(0, 7) === ym;
+      };
       var dayKcalSeries = function (map) {
         return days.map(function (d) { return { day: d.day, value: Math.round(map[d.day] || 0) }; });
       };
@@ -389,8 +411,8 @@
       s.kcal = dayKcalSeries(kcalMap);
       s.kcalFood = dayKcalSeries(kcalFoodMap);
       s.kcalSnack = dayKcalSeries(kcalSnackMap);
-      s.weight = C.weightSeries(records).filter(function (p) { return p.day.slice(0, 7) === ym; });
-      s.temp = C.tempSeries(records).filter(function (p) { return p.day.slice(0, 7) === ym; });
+      s.weight = C.weightSeries(records).filter(inShown);
+      s.temp = C.tempSeries(records).filter(inShown);
     } else {
       // カロリーの週平均(記録がある日だけで平均)
       var weekKcalSeries = function (map) {
@@ -417,7 +439,7 @@
         .map(function (w) { return { day: w.start, value: w.temp }; });
     }
 
-    var perDay = state.chartMode === "day" ? " / 日" : " / 日の週平均";
+    var perDay = state.chartMode === "week" ? " / 日の週平均" : " / 日";
     var hasValue = function (series) {
       return series.some(function (d) { return d.value > 0; });
     };
@@ -496,9 +518,21 @@
   }
 
   function renderHistory(records) {
+    var isAlbum = state.historyView === "album";
+    document.querySelectorAll("#tab-history .range-btn").forEach(function (b) {
+      b.classList.toggle("is-active", b.dataset.view === state.historyView);
+    });
+    $("select-bar").hidden = isAlbum;
+    $("history-list-box").hidden = isAlbum;
+    $("album-box").hidden = !isAlbum;
+    $("history-clear").hidden = !state.historyDate;
+    if (isAlbum) {
+      renderAlbum(records);
+      return;
+    }
+
     var box = $("history-list-box");
     box.innerHTML = "";
-    $("history-clear").hidden = !state.historyDate;
     historyIds = [];
 
     var target = listable(records);
@@ -556,6 +590,81 @@
     });
     $("select-all").textContent = allSelected ? "選択を解除" : "すべて選択";
     $("select-delete").textContent = "🗑 削除 (" + n + ")";
+  }
+
+  // ---- アルバム(写真の一覧と拡大表示) ----
+
+  // アルバムに表示中の写真(ライトボックスの前後めくりで使う)
+  var albumEntries = [];
+  var lightboxIndex = 0;
+
+  function renderAlbum(records) {
+    var box = $("album-box");
+    box.innerHTML = "";
+    albumEntries = C.photoEntries(records);
+    if (state.historyDate) {
+      albumEntries = albumEntries.filter(function (e) { return e.day === state.historyDate; });
+    }
+    if (albumEntries.length === 0) {
+      box.innerHTML = '<p class="empty-note">' + (state.historyDate
+        ? dayLabel(state.historyDate) + " の写真はありません"
+        : "まだ写真がありません。きろくの「今日の" + escapeHtml(petName()) + "」で写真を残すと、ここに並びます") +
+        "</p>";
+      return;
+    }
+    albumEntries.forEach(function (entry, i) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "album-item";
+      btn.setAttribute("aria-label", dayLabel(entry.day) + " の写真を大きく見る");
+      var img = document.createElement("img");
+      img.alt = "";
+      img.hidden = true;
+      loadPhotoInto(img, entry.photoId);
+      btn.appendChild(img);
+      var date = document.createElement("span");
+      date.className = "album-date";
+      date.textContent = entry.day.slice(5).replace("-", "/");
+      btn.appendChild(date);
+      btn.addEventListener("click", function () { openLightbox(i); });
+      box.appendChild(btn);
+    });
+  }
+
+  function openLightbox(i) {
+    lightboxIndex = i;
+    updateLightbox();
+    $("lightbox").hidden = false;
+  }
+
+  function updateLightbox() {
+    var entry = albumEntries[lightboxIndex];
+    if (!entry) return;
+    var img = $("lightbox-img");
+    img.hidden = true;
+    img.removeAttribute("src");
+    loadPhotoInto(img, entry.photoId);
+    $("lightbox-caption").textContent =
+      [dayLabel(entry.day), entry.note, entry.by].filter(Boolean).join(" · ");
+    // アルバムは新しい順なので、◀=ひとつ新しい写真 / ▶=ひとつ古い写真
+    $("lightbox-prev").disabled = lightboxIndex === 0;
+    $("lightbox-next").disabled = lightboxIndex === albumEntries.length - 1;
+  }
+
+  function bindAlbum() {
+    $("lightbox-close").addEventListener("click", function () {
+      $("lightbox").hidden = true;
+    });
+    // 写真の外側をタップしても閉じる
+    $("lightbox").addEventListener("click", function (e) {
+      if (e.target === $("lightbox")) $("lightbox").hidden = true;
+    });
+    $("lightbox-prev").addEventListener("click", function () {
+      if (lightboxIndex > 0) { lightboxIndex--; updateLightbox(); }
+    });
+    $("lightbox-next").addEventListener("click", function () {
+      if (lightboxIndex < albumEntries.length - 1) { lightboxIndex++; updateLightbox(); }
+    });
   }
 
   function renderMypage(records) {
@@ -1171,6 +1280,14 @@
   }
 
   function bindHistory() {
+    // きろく一覧 / アルバム の切り替え
+    document.querySelectorAll("#tab-history .range-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        state.historyView = btn.dataset.view;
+        render();
+      });
+    });
+
     // 透明にした日付inputがタップを拾えない環境向けの保険
     $("history-date").parentElement.addEventListener("click", function (e) {
       var input = $("history-date");
@@ -1229,12 +1346,31 @@
       btn.addEventListener("click", function () { switchTab(btn.dataset.tab); });
     });
 
-    document.querySelectorAll(".range-btn").forEach(function (btn) {
+    document.querySelectorAll("#tab-charts .range-btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
         state.chartMode = btn.dataset.mode;
-        document.querySelectorAll(".range-btn").forEach(function (b) {
+        if (state.chartMode === "range" && (!state.chartFrom || !state.chartTo)) {
+          // 期間指定をはじめて開いたときは直近30日を出す
+          var today = C.dayKey(new Date());
+          state.chartTo = today;
+          state.chartFrom = C.shiftDay(today, -29);
+        }
+        document.querySelectorAll("#tab-charts .range-btn").forEach(function (b) {
           b.classList.toggle("is-active", b === btn);
         });
+        render();
+      });
+    });
+
+    // 期間指定の入力(逆順に選んでも入れ替えて描く)
+    [["range-from", "chartFrom"], ["range-to", "chartTo"]].forEach(function (pair) {
+      $(pair[0]).addEventListener("change", function (e) {
+        if (e.target.value) state[pair[1]] = e.target.value;
+        if (state.chartFrom && state.chartTo && state.chartFrom > state.chartTo) {
+          var t = state.chartFrom;
+          state.chartFrom = state.chartTo;
+          state.chartTo = t;
+        }
         render();
       });
     });
@@ -1289,6 +1425,7 @@
     bindMypage();
     bindSettings();
     bindHistory();
+    bindAlbum();
     rebuildBowlRows();
 
     // #charts のようにURLで直接タブを開けるようにする
