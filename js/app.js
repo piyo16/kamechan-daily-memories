@@ -334,9 +334,8 @@
     $("toilet-pee-count").textContent = toilet.pee;
     $("toilet-poop-count").textContent = toilet.poop;
 
-    // この日のカロリー(カロリー登録があるフードの分だけ)
+    // この日のカロリー(カロリー登録があるフードの分だけ。タイルは常に表示)
     var kcal = C.dailyKcal(records, S.getSettings().foods)[key] || 0;
-    $("kcal-tile").hidden = kcal <= 0;
     $("today-kcal").textContent = Math.round(kcal);
 
     // 入力途中(未保存)の内容を消さないよう、編集中は行を作り直さない
