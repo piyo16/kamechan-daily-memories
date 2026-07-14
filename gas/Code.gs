@@ -13,7 +13,7 @@
 
 var SHEET_NAME = "records";
 var PHOTO_FOLDER = "かめちゃん日記_photos";
-var HEADERS = ["id", "ts", "type", "label", "given", "left", "amount", "note", "by", "photoId", "weight", "temp", "updatedAt", "deleted"];
+var HEADERS = ["id", "ts", "type", "label", "given", "left", "amount", "note", "by", "photoId", "weight", "temp", "updatedAt", "deleted", "genre"];
 var COL_UPDATED_AT = HEADERS.indexOf("updatedAt") + 1; // 1始まり
 
 function getSheet_() {
@@ -108,6 +108,7 @@ function rowToRecord_(row) {
     temp: Number(row[11]) || 0,
     updatedAt: String(row[12] || ""),
     deleted: row[13] === true || row[13] === "TRUE" || row[13] === "true",
+    genre: String(row[14] || ""),
   };
 }
 
@@ -115,7 +116,7 @@ function recordToRow_(r) {
   return [
     r.id, r.ts, r.type, r.label || "", r.given || 0, r.left || 0, r.amount || 0,
     r.note || "", r.by || "", r.photoId || "", r.weight || 0, r.temp || 0,
-    r.updatedAt || "", !!r.deleted,
+    r.updatedAt || "", !!r.deleted, r.genre || "",
   ];
 }
 

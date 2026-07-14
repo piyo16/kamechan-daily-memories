@@ -10,6 +10,8 @@
   var state = {
     tab: "record",
     type: "food",
+    genre: "dry", // ごはんのジャンル("dry"|"wet")。水・おやつのときは ""
+    foodFilter: "", // 設定のフード登録一覧のジャンルしぼりこみ("" = すべて)
     recordDate: "", // きろくタブで表示中の日付 "YYYY-MM-DD"("" = きょう)
     chartMonth: new Date().toISOString().slice(0, 7), // グラフ表示中の月 "YYYY-MM"
     chartMode: "week", // "week" | "day" | "range"
@@ -100,6 +102,29 @@
   // プロフィールに登録した名前(未登録なら「かめ」)
   function petName() {
     return (S.getProfile().name || "").trim() || "かめ";
+  }
+
+  // いま選んでいる記録の種類の表示名(ごはんはドライ/ウェットで呼び分ける)
+  function currentTypeLabel() {
+    if (state.type === "food" && C.FOOD_GENRES[state.genre]) {
+      return C.FOOD_GENRES[state.genre].label;
+    }
+    return C.TYPES[state.type].label;
+  }
+
+  // フード登録のジャンル表示名
+  function genreLabel(genre) {
+    if (C.FOOD_GENRES[genre]) return C.FOOD_GENRES[genre].label;
+    if (genre === "snack") return "おやつ";
+    return "ジャンルなし";
+  }
+
+  // 登録フードが、いま記録している種類(ドライ/ウェット/おやつ)と合うか。
+  // ジャンル未設定の登録(旧データ)はどの候補にも出す
+  function foodDefMatchesCurrent(f) {
+    if (!f.genre) return true;
+    if (state.type === "snack") return f.genre === "snack";
+    return f.genre === state.genre;
   }
 
   // 画像を縮小してJPEGのdataURLにする(通信量・容量対策)
@@ -290,12 +315,19 @@
       }
     } else {
       var t = C.TYPES[r.type] || C.TYPES.food;
+      var emoji = t.emoji;
+      var typeLabel = t.label;
+      // ごはんはジャンル(ドライ/ウェット)で呼び分ける。旧レコードは「ごはん」のまま
+      if (r.type === "food" && C.FOOD_GENRES[r.genre]) {
+        emoji = C.FOOD_GENRES[r.genre].emoji;
+        typeLabel = C.FOOD_GENRES[r.genre].label;
+      }
       var parts = [timeLabel(r.ts), r.label, r.note, r.by].filter(Boolean).join(" · ");
       main.innerHTML =
         '<div><span class="record-amount">' + r.amount + " " + t.unit + "</span>" +
-        ' <span class="record-meta">' + t.label + "</span></div>" +
+        ' <span class="record-meta">' + typeLabel + "</span></div>" +
         '<div class="record-meta">' + escapeHtml(parts) + "</div>";
-      li.innerHTML = '<span class="record-emoji">' + t.emoji + "</span>";
+      li.innerHTML = '<span class="record-emoji">' + emoji + "</span>";
       li.appendChild(main);
     }
 
@@ -355,9 +387,18 @@
 
     var todays = listable(records).filter(function (r) { return C.dayKey(r.ts) === key; });
 
-    var totals = C.dailyTotals(todays)[key] || { food: 0, water: 0, snack: 0 };
+    var totals = C.dailyTotals(todays)[key] || { food: 0, foodDry: 0, foodWet: 0, water: 0, snack: 0 };
     $("today-food").textContent = totals.food;
     $("today-water").textContent = totals.water;
+
+    // ごはんタイルにドライ/ウェットの内訳(どちらかの記録があるときだけ)
+    var genreSub = $("today-food-genres");
+    if (totals.foodDry > 0 || totals.foodWet > 0) {
+      genreSub.textContent = "ドライ " + totals.foodDry + " · ウェット " + totals.foodWet;
+      genreSub.hidden = false;
+    } else {
+      genreSub.hidden = true;
+    }
 
     var toilet = C.dailyToiletCounts(records)[key] || { pee: 0, poop: 0 };
     $("toilet-pee-count").textContent = toilet.pee;
@@ -415,6 +456,8 @@
         return days.map(function (d) { return { day: d.day, value: Math.round(map[d.day] || 0) }; });
       };
       s.food = days.map(function (d) { return { day: d.day, value: d.food }; });
+      s.foodDry = days.map(function (d) { return { day: d.day, value: d.foodDry || 0 }; });
+      s.foodWet = days.map(function (d) { return { day: d.day, value: d.foodWet || 0 }; });
       s.water = days.map(function (d) { return { day: d.day, value: d.water }; });
       s.snack = days.map(function (d) { return { day: d.day, value: d.snack }; });
       s.kcal = dayKcalSeries(kcalMap);
@@ -437,6 +480,8 @@
         });
       };
       s.food = weeks.map(function (w) { return { day: w.start, value: w.food }; });
+      s.foodDry = weeks.map(function (w) { return { day: w.start, value: w.foodDry || 0 }; });
+      s.foodWet = weeks.map(function (w) { return { day: w.start, value: w.foodWet || 0 }; });
       s.water = weeks.map(function (w) { return { day: w.start, value: w.water }; });
       s.snack = weeks.map(function (w) { return { day: w.start, value: w.snack }; });
       s.kcal = weekKcalSeries(kcalMap);
@@ -456,7 +501,11 @@
     // 各グラフの定義。has=false のものはトグルにも出さない
     var chartDefs = [
       { key: "food", card: "food-card", box: "chart-food", label: "ごはん", swatch: "--series-food",
-        has: true, opts: { data: s.food, unit: "g", color: "--series-food", title: "ごはん" + perDay } },
+        has: true, opts: { data: s.food, unit: "g", color: "--series-food", title: "ごはん(合算)" + perDay } },
+      { key: "foodDry", card: "food-dry-card", box: "chart-food-dry", label: "ドライ", swatch: "--series-dry",
+        has: hasValue(s.foodDry), opts: { data: s.foodDry, unit: "g", color: "--series-dry", title: "ドライ" + perDay } },
+      { key: "foodWet", card: "food-wet-card", box: "chart-food-wet", label: "ウェット", swatch: "--series-wet",
+        has: hasValue(s.foodWet), opts: { data: s.foodWet, unit: "g", color: "--series-wet", title: "ウェット" + perDay } },
       { key: "water", card: "water-card", box: "chart-water", label: "水", swatch: "--series-water",
         has: true, opts: { data: s.water, unit: "ml", color: "--series-water", title: "水" + perDay } },
       { key: "snack", card: "snack-card", box: "chart-snack", label: "おやつ", swatch: "--series-snack",
@@ -755,13 +804,21 @@
     $("setting-gas-token").value = s.gasToken || "";
     $("record-count").textContent = C.liveRecords(S.getRecords()).length;
 
+    // フード登録の一覧(ジャンルでしぼりこめる)
+    document.querySelectorAll("#food-filter .range-btn").forEach(function (b) {
+      b.classList.toggle("is-active", (b.dataset.genre || "") === state.foodFilter);
+    });
     var foods = S.getFoods();
+    var shown = state.foodFilter
+      ? foods.filter(function (f) { return (f.genre || "") === state.foodFilter; })
+      : foods;
     var ul = $("food-defs");
     ul.innerHTML = "";
-    if (foods.length === 0) {
-      ul.innerHTML = '<p class="empty-note">まだ登録がありません</p>';
+    if (shown.length === 0) {
+      ul.innerHTML = '<p class="empty-note">' +
+        (foods.length === 0 ? "まだ登録がありません" : "このジャンルの登録はありません") + "</p>";
     }
-    foods.forEach(function (f, idx) {
+    shown.forEach(function (f) {
       var li = document.createElement("li");
       li.className = "food-def-item";
       var info = [];
@@ -769,13 +826,14 @@
       if (f.kcal100) info.push(f.kcal100 + " kcal/100g");
       li.innerHTML =
         '<span class="food-def-name">' + escapeHtml(f.name) + "</span>" +
+        '<span class="food-def-genre">' + genreLabel(f.genre) + "</span>" +
         '<span class="food-def-amount">' + info.join(" · ") + "</span>";
       var del = document.createElement("button");
       del.className = "delete-btn";
       del.textContent = "✕";
+      del.setAttribute("aria-label", f.name + " の登録を削除");
       del.addEventListener("click", function () {
-        foods.splice(idx, 1);
-        S.setFoods(foods);
+        S.setFoods(S.getFoods().filter(function (x) { return x.name !== f.name; }));
         renderSettings();
       });
       li.appendChild(del);
@@ -793,8 +851,10 @@
 
     function refresh() {
       var q = nameInput.value.trim();
+      // いま記録している種類(ドライ/ウェット/おやつ)とジャンルが合うものだけ候補に出す
       var hits = S.getFoods().filter(function (f) {
-        return !q || f.name.indexOf(q) >= 0;
+        if (q && f.name.indexOf(q) < 0) return false;
+        return foodDefMatchesCurrent(f);
       });
       panel.innerHTML = "";
       if (hits.length === 0) {
@@ -867,19 +927,23 @@
       item.dataset.oLabel = record.label || "";
       item.dataset.oGiven = record.given ? String(record.given) : "";
       item.dataset.oLeft = record.left ? String(record.left) : "";
+      var metaParts = [timeLabel(record.ts), record.by, record.note].filter(Boolean);
+      // ジャンルのない昔のごはん記録はドライ・ウェット両方に出るので、それと分かるようにする
+      if (record.type === "food" && !C.FOOD_GENRES[record.genre]) metaParts.push("ジャンルなし");
       var meta = document.createElement("div");
       meta.className = "bowl-row-meta";
-      meta.textContent = "✔ " + [timeLabel(record.ts), record.by, record.note]
-        .filter(Boolean).join(" · ");
+      meta.textContent = "✔ " + metaParts.join(" · ");
       item.appendChild(meta);
     }
 
+    var namePlaceholder = state.type === "snack" ? "ちゅ〜る"
+      : state.genre === "wet" ? "パウチ" : "カリカリ";
     var row = document.createElement("div");
     row.className = "bowl-row";
     row.innerHTML =
       '<label class="bowl-name">' + (isFood ? "フード名" : "場所(任意)") +
       '<input type="text" class="in-name"' +
-      ' placeholder="' + (isFood ? "カリカリ" : "リビング") + '"></label>' +
+      ' placeholder="' + (isFood ? namePlaceholder : "リビング") + '"></label>' +
       "<label>あげた量 " + unit +
       '<input type="number" class="in-given" inputmode="decimal" min="0" step="0.1" placeholder="50"></label>' +
       "<label>残した量 " + unit +
@@ -942,7 +1006,12 @@
     $("bowl-rows").innerHTML = "";
     var key = recordDayKey();
     var saved = C.liveRecords(records || S.getRecords())
-      .filter(function (r) { return r.type === state.type && C.dayKey(r.ts) === key; })
+      .filter(function (r) {
+        if (r.type !== state.type || C.dayKey(r.ts) !== key) return false;
+        // ごはんはジャンルで分けて表示。ジャンルのない旧レコードはどちらにも出す
+        if (state.type === "food" && C.FOOD_GENRES[r.genre]) return r.genre === state.genre;
+        return true;
+      })
       .sort(function (a, b) { return a.ts < b.ts ? -1 : 1; });
     saved.forEach(function (r) { addBowlRow(r); });
     if (saved.length === 0) addBowlRow();
@@ -987,7 +1056,7 @@
     var total = Math.round(amounts.reduce(function (a, b) { return a + b; }, 0) * 10) / 10;
     var prefix = recordDayKey() === C.dayKey(new Date()) ? "今日の" : "この日の";
     p.hidden = false;
-    p.textContent = prefix + C.TYPES[state.type].label + " 合計 " + total + " " + unit +
+    p.textContent = prefix + currentTypeLabel() + " 合計 " + total + " " + unit +
       (amounts.length > 1 ? "(" + amounts.join(" + ") + ")" : "") +
       (hasKcal ? " · 約 " + totalKcal + " kcal" : "");
   }
@@ -995,9 +1064,11 @@
   function bindForm() {
     document.querySelectorAll(".type-btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        if (state.type === btn.dataset.type) return;
+        var genre = btn.dataset.genre || "";
+        if (state.type === btn.dataset.type && state.genre === genre) return;
         if (isBowlAreaDirty() && !confirm("保存していない入力があります。切り替えますか?")) return;
         state.type = btn.dataset.type;
+        state.genre = genre;
         document.querySelectorAll(".type-btn").forEach(function (b) {
           b.classList.toggle("is-active", b === btn);
         });
@@ -1039,6 +1110,7 @@
             id: C.uuid(),
             ts: ts,
             type: state.type,
+            genre: state.type === "food" ? state.genre : "",
             label: v.label,
             given: given,
             left: left,
@@ -1230,12 +1302,20 @@
       });
     });
 
+    document.querySelectorAll("#food-filter .range-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        state.foodFilter = btn.dataset.genre || "";
+        renderSettings();
+      });
+    });
+
     $("food-add").addEventListener("click", function () {
       var name = $("food-name").value.trim();
       if (!name) return;
       var foods = S.getFoods().filter(function (f) { return f.name !== name; });
       foods.push({
         name: name,
+        genre: $("food-genre").value || "dry",
         amount: Number($("food-amount").value) || 0,
         kcal100: Number($("food-kcal").value) || 0,
       });

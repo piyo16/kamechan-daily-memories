@@ -15,9 +15,11 @@
   --series-food: #2a78d6;   /* categorical slot 1: blue */
   --series-water: #1baf7a;  /* categorical slot 2: aqua */
   --series-weight: #eda100; /* categorical slot 3: yellow */
+  --series-dry: #008300;    /* categorical slot 4: green */
   --series-snack: #4a3aa7;  /* categorical slot 5: violet */
   --series-temp: #e34948;   /* categorical slot 6: red */
   --series-kcal: #c95d1a;   /* categorical slot 7: orange */
+  --series-wet: #e87ba4;    /* categorical slot 8: magenta */
   --status-good: #0ca30c;
   --status-warning: #fab219;
   --accent: #2a78d6;
@@ -36,9 +38,11 @@
     --series-food: #3987e5;
     --series-water: #199e70;
     --series-weight: #c98500;
+    --series-dry: #008300;
     --series-snack: #9085e9;
     --series-temp: #e66767;
     --series-kcal: #dd8340;
+    --series-wet: #d55181;
     --accent: #3987e5;
   }
 }
@@ -101,17 +105,26 @@ main { padding: 0 14px; max-width: 480px; margin: 0 auto; }
 .tile-value { font-size: 0.9rem; color: var(--text-secondary); white-space: nowrap; }
 .tile-value b { font-size: 1.6rem; color: var(--text-primary); font-weight: 700; }
 
+/* ごはんタイルのドライ/ウェット内訳 */
+.tile-sub {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- 入力フォーム --- */
-.type-select { display: flex; gap: 8px; margin-bottom: 12px; }
+.type-select { display: flex; gap: 6px; margin-bottom: 12px; }
 
 .type-btn {
   flex: 1;
-  padding: 10px 4px;
+  padding: 10px 2px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: 0.82rem; /* ドライ/ウェット/水/おやつ の4つが小さい画面でも1行に入る大きさ */
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -358,6 +371,8 @@ input[type="datetime-local"] {
 
 .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 .swatch-food { background: var(--series-food); }
+.swatch-dry { background: var(--series-dry); }
+.swatch-wet { background: var(--series-wet); }
 .swatch-water { background: var(--series-water); }
 .swatch-weight { background: var(--series-weight); }
 .swatch-snack { background: var(--series-snack); }
@@ -641,6 +656,20 @@ input[type="datetime-local"] {
 
 .food-def-item .food-def-name { flex: 1; }
 .food-def-item .food-def-amount { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+.food-def-genre {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+/* フード登録一覧のジャンルしぼりこみ */
+.food-filter { margin: 4px 0 10px; flex-wrap: wrap; }
+.food-filter .range-btn { padding: 7px 12px; }
 
 #food-add { width: 100%; margin-top: 6px; }
 

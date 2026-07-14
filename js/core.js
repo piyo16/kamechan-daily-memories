@@ -20,6 +20,12 @@
   // 量を集計する対象(diary/profile などは集計に含めない)
   var AMOUNT_TYPES = ["food", "water", "snack"];
 
+  // ごはんのジャンル(レコードの genre)。genre がない旧レコードは合算のみに入る
+  var FOOD_GENRES = {
+    dry: { label: "ドライ", emoji: "🍚", totalKey: "foodDry" },
+    wet: { label: "ウェット", emoji: "🥫", totalKey: "foodWet" },
+  };
+
   function uuid() {
     if (typeof crypto !== "undefined" && crypto.randomUUID) {
       return crypto.randomUUID();
@@ -77,19 +83,29 @@
     return (records || []).filter(function (r) { return !r.deleted; });
   }
 
-  // 日別合計: { "2026-07-05": { food: 42, water: 120, snack: 5 }, ... }
+  // 日別合計の空の入れ物。foodDry / foodWet は food(合算)の内訳
+  function emptyDayTotals() {
+    return { food: 0, foodDry: 0, foodWet: 0, water: 0, snack: 0 };
+  }
+
+  // 日別合計: { "2026-07-05": { food: 42, foodDry: 30, foodWet: 12, water: 120, snack: 5 }, ... }
   function dailyTotals(records) {
     var out = {};
     liveRecords(records).forEach(function (r) {
       if (AMOUNT_TYPES.indexOf(r.type) < 0) return;
       var k = dayKey(r.ts);
-      if (!out[k]) out[k] = { food: 0, water: 0, snack: 0 };
-      out[k][r.type] = round1((out[k][r.type] || 0) + (Number(r.amount) || 0));
+      if (!out[k]) out[k] = emptyDayTotals();
+      var amount = Number(r.amount) || 0;
+      out[k][r.type] = round1((out[k][r.type] || 0) + amount);
+      if (r.type === "food" && FOOD_GENRES[r.genre]) {
+        var gk = FOOD_GENRES[r.genre].totalKey;
+        out[k][gk] = round1(out[k][gk] + amount);
+      }
     });
     return out;
   }
 
-  // 直近 n 日分の [{ day, food, water, snack }] を古い順で返す(欠損日は0)
+  // 直近 n 日分の [{ day, food, foodDry, foodWet, water, snack }] を古い順で返す(欠損日は0)
   function lastNDays(records, n, today) {
     var totals = dailyTotals(records);
     var base = today ? new Date(today) : new Date();
@@ -97,8 +113,8 @@
     for (var i = n - 1; i >= 0; i--) {
       var d = new Date(base.getFullYear(), base.getMonth(), base.getDate() - i);
       var k = dayKey(d);
-      var t = totals[k] || { food: 0, water: 0, snack: 0 };
-      out.push({ day: k, food: t.food, water: t.water, snack: t.snack });
+      var t = totals[k] || emptyDayTotals();
+      out.push({ day: k, food: t.food, foodDry: t.foodDry, foodWet: t.foodWet, water: t.water, snack: t.snack });
     }
     return out;
   }
@@ -171,8 +187,8 @@
     var out = [];
     for (var d = 1; d <= lastDay; d++) {
       var k = ym + "-" + (d < 10 ? "0" + d : d);
-      var t = totals[k] || { food: 0, water: 0, snack: 0 };
-      out.push({ day: k, food: t.food, water: t.water, snack: t.snack });
+      var t = totals[k] || emptyDayTotals();
+      out.push({ day: k, food: t.food, foodDry: t.foodDry, foodWet: t.foodWet, water: t.water, snack: t.snack });
     }
     return out;
   }
@@ -187,8 +203,8 @@
     var totals = dailyTotals(records);
     var out = [];
     for (var k = fromKey; k <= toKey && out.length < 731; k = shiftDay(k, 1)) {
-      var t = totals[k] || { food: 0, water: 0, snack: 0 };
-      out.push({ day: k, food: t.food, water: t.water, snack: t.snack });
+      var t = totals[k] || emptyDayTotals();
+      out.push({ day: k, food: t.food, foodDry: t.foodDry, foodWet: t.foodWet, water: t.water, snack: t.snack });
     }
     return out;
   }
@@ -220,7 +236,7 @@
     var out = [];
 
     for (var ws = new Date(firstWeek); ws <= monthEnd; ws.setDate(ws.getDate() + 7)) {
-      var days = 0, food = 0, water = 0, snack = 0;
+      var days = 0, food = 0, foodDry = 0, foodWet = 0, water = 0, snack = 0;
       var weekKeys = [];
       for (var i = 0; i < 7; i++) {
         var d = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() + i);
@@ -230,6 +246,8 @@
         if (t && (t.food > 0 || t.water > 0 || t.snack > 0)) {
           days++;
           food += t.food;
+          foodDry += t.foodDry;
+          foodWet += t.foodWet;
           water += t.water;
           snack += t.snack;
         }
@@ -244,6 +262,8 @@
         start: dayKey(new Date(ws)),
         days: days,
         food: days ? round1(food / days) : 0,
+        foodDry: days ? round1(foodDry / days) : 0,
+        foodWet: days ? round1(foodWet / days) : 0,
         water: days ? round1(water / days) : 0,
         snack: days ? round1(snack / days) : 0,
         weight: avgOf(wSeries),
@@ -451,6 +471,7 @@
   return {
     TYPES: TYPES,
     AMOUNT_TYPES: AMOUNT_TYPES,
+    FOOD_GENRES: FOOD_GENRES,
     uuid: uuid,
     consumed: consumed,
     dayKey: dayKey,

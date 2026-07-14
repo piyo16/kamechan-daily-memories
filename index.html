@@ -39,6 +39,7 @@
         <div class="tile">
           <span class="tile-label" id="tile-food-label">今日のごはん</span>
           <span class="tile-value"><b id="today-food">0</b> g</span>
+          <span class="tile-sub" id="today-food-genres" hidden></span>
         </div>
         <div class="tile">
           <span class="tile-label" id="tile-water-label">今日の水</span>
@@ -52,7 +53,8 @@
 
       <form id="record-form" class="card">
         <div class="type-select" role="radiogroup" aria-label="記録の種類">
-          <button type="button" class="type-btn is-active" data-type="food">🍚 ごはん</button>
+          <button type="button" class="type-btn is-active" data-type="food" data-genre="dry">🍚 ドライ</button>
+          <button type="button" class="type-btn" data-type="food" data-genre="wet">🥫 ウェット</button>
           <button type="button" class="type-btn" data-type="water">💧 水</button>
           <button type="button" class="type-btn" data-type="snack">🍬 おやつ</button>
         </div>
@@ -141,8 +143,16 @@
       <div class="chart-toggle" id="chart-toggle" aria-label="表示するグラフ"></div>
 
       <div class="card chart-card" id="food-card">
-        <h2 class="chart-title"><span class="swatch swatch-food"></span>ごはん(g / 日)</h2>
+        <h2 class="chart-title"><span class="swatch swatch-food"></span>ごはん 合算(g / 日)</h2>
         <div id="chart-food" class="chart-box"></div>
+      </div>
+      <div class="card chart-card" id="food-dry-card" hidden>
+        <h2 class="chart-title"><span class="swatch swatch-dry"></span>ドライ(g / 日)</h2>
+        <div id="chart-food-dry" class="chart-box"></div>
+      </div>
+      <div class="card chart-card" id="food-wet-card" hidden>
+        <h2 class="chart-title"><span class="swatch swatch-wet"></span>ウェット(g / 日)</h2>
+        <div id="chart-food-wet" class="chart-box"></div>
       </div>
       <div class="card chart-card" id="water-card">
         <h2 class="chart-title"><span class="swatch swatch-water"></span>水(ml / 日)</h2>
@@ -289,11 +299,26 @@
 
       <div class="card">
         <h2 class="card-title">フードの登録</h2>
-        <p class="hint">登録すると「ごはん」「おやつ」の名前欄で選べて、いつもの量が自動入力されます。カロリーを登録すると、きろくとグラフに1日のカロリーが出ます。</p>
+        <p class="hint">登録すると、きろくの名前欄でジャンルが合うものを選べて、いつもの量が自動入力されます。カロリーを登録すると、きろくとグラフに1日のカロリーが出ます。同じ名前で登録すると上書きされます。</p>
+        <div class="range-toggle food-filter" id="food-filter" role="radiogroup" aria-label="ジャンルでしぼりこむ">
+          <button type="button" class="range-btn is-active" data-genre="">すべて</button>
+          <button type="button" class="range-btn" data-genre="dry">ドライ</button>
+          <button type="button" class="range-btn" data-genre="wet">ウェット</button>
+          <button type="button" class="range-btn" data-genre="snack">おやつ</button>
+        </div>
         <ul id="food-defs" class="food-defs"></ul>
-        <label>フード名
-          <input type="text" id="food-name" placeholder="例: カリカリ">
-        </label>
+        <div class="field-row">
+          <label>フード名
+            <input type="text" id="food-name" placeholder="例: カリカリ">
+          </label>
+          <label>ジャンル
+            <select id="food-genre">
+              <option value="dry">ドライ</option>
+              <option value="wet">ウェット</option>
+              <option value="snack">おやつ</option>
+            </select>
+          </label>
+        </div>
         <div class="field-row">
           <label>いつもの量 g
             <input type="number" id="food-amount" inputmode="decimal" min="0" step="0.1" placeholder="例: 25">

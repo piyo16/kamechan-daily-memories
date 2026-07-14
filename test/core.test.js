@@ -60,6 +60,32 @@ assert.strictEqual(days[0].food, 0);
 assert.strictEqual(days[1].water, 80);
 assert.strictEqual(days[2].food, 55.5);
 
+// dailyTotals: ごはんのジャンル(ドライ/ウェット)は内訳としても集計される
+const genreRecs = [
+  { id: "g1", ts: "2026-07-05T08:00:00", type: "food", genre: "dry", amount: 30, updatedAt: "1" },
+  { id: "g2", ts: "2026-07-05T18:00:00", type: "food", genre: "wet", amount: 20, updatedAt: "1" },
+  { id: "g3", ts: "2026-07-05T12:00:00", type: "food", amount: 10, updatedAt: "1" }, // 旧レコード(genreなし)
+  { id: "g4", ts: "2026-07-05T13:00:00", type: "snack", genre: "dry", amount: 5, updatedAt: "1" }, // おやつは内訳に入らない
+  { id: "g5", ts: "2026-07-04T08:00:00", type: "food", genre: "dry", amount: 25, updatedAt: "1" },
+];
+const genreTotals = C.dailyTotals(genreRecs);
+assert.strictEqual(genreTotals["2026-07-05"].food, 60);     // 合算は genre 有無によらず全部
+assert.strictEqual(genreTotals["2026-07-05"].foodDry, 30);
+assert.strictEqual(genreTotals["2026-07-05"].foodWet, 20);
+assert.strictEqual(genreTotals["2026-07-05"].snack, 5);
+assert.strictEqual(genreTotals["2026-07-04"].foodDry, 25);
+assert.strictEqual(genreTotals["2026-07-04"].foodWet, 0);
+
+// lastNDays / daysOfMonth / daysInRange にも内訳が入る(欠損日は0)
+const genreDays = C.lastNDays(genreRecs, 3, new Date(2026, 6, 5));
+assert.strictEqual(genreDays[0].foodDry, 0);   // 7/3 記録なし
+assert.strictEqual(genreDays[1].foodDry, 25);  // 7/4
+assert.strictEqual(genreDays[2].foodWet, 20);  // 7/5
+assert.strictEqual(C.daysOfMonth(genreRecs, "2026-07")[4].foodDry, 30);  // 7/5
+assert.strictEqual(C.daysOfMonth(genreRecs, "2026-07")[30].foodWet, 0);  // 7/31 記録なし
+assert.strictEqual(C.daysInRange(genreRecs, "2026-07-04", "2026-07-05")[1].foodWet, 20);
+assert.strictEqual(C.daysInRange(genreRecs, "2026-07-04", "2026-07-05")[0].foodWet, 0);
+
 // dailyTotals: diary/profile は集計に入らない
 const withDiary = recs.concat([
   { id: "d1", ts: "2026-07-05T21:00:00", type: "diary", note: "元気", weight: 4.2, updatedAt: "1" },
@@ -202,8 +228,8 @@ assert.strictEqual(photos[1].note, "ねてた");
 
 // weeklyStatsForMonth: 月に重なる週ごとの平均(体重・体温も)
 const julyRecs = [
-  { id: "j1", ts: "2026-07-01T08:00:00", type: "food", amount: 40, updatedAt: "1" },
-  { id: "j2", ts: "2026-07-02T08:00:00", type: "food", amount: 60, updatedAt: "1" },
+  { id: "j1", ts: "2026-07-01T08:00:00", type: "food", genre: "dry", amount: 40, updatedAt: "1" },
+  { id: "j2", ts: "2026-07-02T08:00:00", type: "food", genre: "wet", amount: 60, updatedAt: "1" },
   { id: "j3", ts: "2026-07-02T09:00:00", type: "snack", amount: 10, updatedAt: "1" },
   { id: "j4", ts: "2026-07-01T20:00:00", type: "diary", weight: 4.2, temp: 38.4, updatedAt: "1" },
 ];
@@ -212,7 +238,9 @@ const julyWeeks = C.weeklyStatsForMonth(julyRecs, "2026-07");
 assert.strictEqual(julyWeeks.length, 5);
 assert.strictEqual(julyWeeks[0].start, "2026-06-29");
 assert.strictEqual(julyWeeks[0].days, 2);
-assert.strictEqual(julyWeeks[0].food, 50);   // (40+60)/2
+assert.strictEqual(julyWeeks[0].food, 50);    // (40+60)/2
+assert.strictEqual(julyWeeks[0].foodDry, 20); // (40+0)/2
+assert.strictEqual(julyWeeks[0].foodWet, 30); // (0+60)/2
 assert.strictEqual(julyWeeks[0].snack, 5);   // (0+10)/2
 assert.strictEqual(julyWeeks[0].weight, 4.2);
 assert.strictEqual(julyWeeks[0].temp, 38.4);
