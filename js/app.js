@@ -18,6 +18,7 @@
     chartFrom: "", chartTo: "", // 期間指定グラフの範囲 "YYYY-MM-DD"
     historyDate: "", // りれきの日付フィルタ("" = 全部)
     historyView: "list", // "list"(きろく一覧) | "album"(写真)
+    editingFood: "", // 設定で編集中のフード登録の元の名前("" = 新規登録)
     stagedPhoto: null, // 「今日のかめ」で選択中の写真dataURL
     selectMode: false, // りれきの複数選択モード
     selected: {}, // 選択中の記録id → true
@@ -60,6 +61,17 @@
   function $(id) { return document.getElementById(id); }
 
   // ---- ユーティリティ ----
+
+  // 保存できたことを短く知らせるトースト
+  var toastTimer = null;
+  function showToast(msg) {
+    var t = $("toast");
+    t.hidden = true; // 連打でもアニメーションが再生されるよう一度消す
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 1800);
+  }
 
   // きろくタブで表示中の日付キー("" = きょう)
   function recordDayKey() {
@@ -820,25 +832,54 @@
     }
     shown.forEach(function (f) {
       var li = document.createElement("li");
-      li.className = "food-def-item";
+      li.className = "food-def-item" + (state.editingFood === f.name ? " is-editing" : "");
       var info = [];
       if (f.amount) info.push(f.amount + " g");
       if (f.kcal100) info.push(f.kcal100 + " kcal/100g");
       li.innerHTML =
-        '<span class="food-def-name">' + escapeHtml(f.name) + "</span>" +
-        '<span class="food-def-genre">' + genreLabel(f.genre) + "</span>" +
-        '<span class="food-def-amount">' + info.join(" · ") + "</span>";
+        '<div class="food-def-main">' +
+        '<div><span class="food-def-name">' + escapeHtml(f.name) + "</span>" +
+        '<span class="food-def-genre">' + genreLabel(f.genre) + "</span></div>" +
+        (info.length ? '<div class="food-def-amount">' + info.join(" · ") + "</div>" : "") +
+        "</div>";
+      var edit = document.createElement("button");
+      edit.className = "edit-btn";
+      edit.textContent = "✏️";
+      edit.setAttribute("aria-label", f.name + " の登録を編集");
+      edit.addEventListener("click", function () {
+        state.editingFood = f.name;
+        $("food-name").value = f.name;
+        $("food-genre").value = f.genre || "dry"; // ジャンルなしの旧登録はここで付け直せる
+        $("food-amount").value = f.amount || "";
+        $("food-kcal").value = f.kcal100 || "";
+        renderSettings();
+        $("food-add").scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+      li.appendChild(edit);
       var del = document.createElement("button");
       del.className = "delete-btn";
       del.textContent = "✕";
       del.setAttribute("aria-label", f.name + " の登録を削除");
       del.addEventListener("click", function () {
         S.setFoods(S.getFoods().filter(function (x) { return x.name !== f.name; }));
+        if (state.editingFood === f.name) cancelFoodEdit();
         renderSettings();
       });
       li.appendChild(del);
       ul.appendChild(li);
     });
+
+    // フォームのボタンを編集中/新規で切り替える
+    $("food-add").textContent = state.editingFood ? "✏️ 更新する" : "＋ 登録する";
+    $("food-edit-cancel").hidden = !state.editingFood;
+  }
+
+  // フード登録の編集をやめてフォームを空に戻す
+  function cancelFoodEdit() {
+    state.editingFood = "";
+    $("food-name").value = "";
+    $("food-amount").value = "";
+    $("food-kcal").value = "";
   }
 
   // フード名欄に独自の候補ドロップダウンを付ける。
@@ -1123,7 +1164,10 @@
         saved++;
       });
 
-      if (saved === 0) return;
+      if (saved === 0) {
+        showToast("変わったところはありません");
+        return;
+      }
       S.trySync();
 
       if (by) {
@@ -1136,6 +1180,7 @@
       $("ts").value = nowLocalForInput();
       rebuildBowlRows();
       render();
+      showToast("✅ " + saved + "件 保存しました");
     });
   }
 
@@ -1222,6 +1267,7 @@
         $("photo-preview").hidden = true;
         $("photo-pick-hint").hidden = false;
         render();
+        showToast("✅ 残しました");
       });
     });
   }
@@ -1239,6 +1285,7 @@
       p.diseases = $("p-diseases").value.trim();
       S.setProfile(p);
       render();
+      showToast("✅ 保存しました");
     });
 
     $("avatar-input").addEventListener("change", function (e) {
@@ -1312,17 +1359,33 @@
     $("food-add").addEventListener("click", function () {
       var name = $("food-name").value.trim();
       if (!name) return;
-      var foods = S.getFoods().filter(function (f) { return f.name !== name; });
-      foods.push({
+      var newFood = {
         name: name,
         genre: $("food-genre").value || "dry",
         amount: Number($("food-amount").value) || 0,
         kcal100: Number($("food-kcal").value) || 0,
-      });
+      };
+      var editing = state.editingFood;
+      var foods;
+      if (editing) {
+        // 編集中は元の位置のまま置きかえる。名前を変えた先に同名の登録があれば消す
+        foods = S.getFoods()
+          .filter(function (f) { return f.name === editing || f.name !== name; })
+          .map(function (f) { return f.name === editing ? newFood : f; });
+        if (foods.indexOf(newFood) < 0) foods.push(newFood);
+      } else {
+        // 同じ名前があれば上書き(末尾に移動)
+        foods = S.getFoods().filter(function (f) { return f.name !== name; });
+        foods.push(newFood);
+      }
       S.setFoods(foods);
-      $("food-name").value = "";
-      $("food-amount").value = "";
-      $("food-kcal").value = "";
+      cancelFoodEdit();
+      renderSettings();
+      showToast(editing ? "✅ 更新しました" : "✅ 登録しました");
+    });
+
+    $("food-edit-cancel").addEventListener("click", function () {
+      cancelFoodEdit();
       renderSettings();
     });
 

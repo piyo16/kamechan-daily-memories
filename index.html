@@ -63,7 +63,6 @@
 
         <button type="button" id="add-row" class="ghost-btn add-row-btn">＋ お皿を追加</button>
         <p class="consumed-preview" id="consumed-preview" hidden></p>
-        <p class="hint">この日の記録はここに残ります。数字を直したら「保存する」を押してください。</p>
 
         <label>メモ(任意)
           <input type="text" id="note" placeholder="例: 食いつき良い">
@@ -328,6 +327,7 @@
           </label>
         </div>
         <button type="button" id="food-add" class="ghost-btn">＋ 登録する</button>
+        <button type="button" id="food-edit-cancel" class="ghost-btn" hidden>編集をやめる</button>
       </div>
 
       <div class="card">
@@ -365,6 +365,9 @@
     </div>
     <p id="lightbox-caption" class="lightbox-caption"></p>
   </div>
+
+  <!-- 保存できたことを知らせるトースト -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <nav class="tab-bar">
     <button class="tab-btn is-active" data-tab="record">✏️<span>きろく</span></button>
